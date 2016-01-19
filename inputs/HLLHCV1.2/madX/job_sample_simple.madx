@@ -14,5 +14,5 @@ exec,check_ip(b1); exec,check_ip(b2);
 print, text="TEST";
 
 select, flag=twiss, clear;
-select, flag=twiss, column=name,s,X,DX,Y,DY,RE;
+select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE;
 twiss,rmatrix=true,file="test.tfs",chrom=true;

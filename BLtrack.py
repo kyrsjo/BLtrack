@@ -39,6 +39,8 @@ class Bunch:
     "A group of particles which are assumed to be independent, i.e. no short-range wake"
     
     #6xN matrix of all particles in the bunch.
+    # Variables [madX units]:
+    # X [m], PX [px/p0], Y [m], PY [py/p0], T [=-ct, m], PT [=DeltaE/(p_s*c)]
     particles = None
     N = None
     
