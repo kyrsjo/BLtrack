@@ -1,0 +1,18 @@
+option, warn,info;
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/HLLHCV1.2/ slhc";
+system,"ln -fns /afs/cern.ch/eng/lhc/optics/V6.503 db5";
+
+option, -echo, -warn,info;
+call,file="slhc/toolkit/macro.madx";
+call,file="slhc/hllhc.seq";
+exec,mk_beam(7000);
+
+call,file="slhc/opt_round.madx"; ! For thick optics
+exec,crossing_enable;
+exec,check_ip(b1); exec,check_ip(b2);
+
+print, text="TEST";
+
+select, flag=twiss, clear;
+select, flag=twiss, column=name,s,X,DX,Y,DY,RE;
+twiss,rmatrix=true,file="test.tfs",chrom=true;
