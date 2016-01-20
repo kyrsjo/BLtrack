@@ -1,7 +1,8 @@
 import numpy as np
 
 class Beam:
-    bunches    = None  #Bunch objects
+    E0         = None #Beam energy
+    bunches    = None #Bunch objects
     bunches_z0 = None #Time of z=0 for the bunch objects, relative to some particle on the design orbit
     
     def __init__(self):
@@ -25,11 +26,20 @@ class Beam:
                 N=int(l[1])
                 lf = map(float,l[2:])
                 self.bunches.append(Bunch(N, lf[0],lf[1],lf[2],lf[3],lf[4],lf[5]))
+                self.bunches[-1].E0 = self.E0
                 #print self.bunches[-1].particles
+                
+            elif line[:6] == "ENERGY":
+                l=line[6:].split()
+                assert len(l)==1,\
+                    "Expected format: 'ENERGY E0[eV]', got: "+str(len(l))+" "+str(l)
+                assert self.E0==None
+                self.E0 = float(l[0])
                 
             else:
                 print "Error in Beam::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
+        assert self.E0!=None
             
     def sortBunches(self):
         pass
@@ -42,7 +52,10 @@ class Bunch:
     # Variables [madX units]:
     # X [m], PX [px/p0], Y [m], PY [py/p0], T [=-ct, m], PT [=DeltaE/(p_s*c)]
     particles = None
-    N = None
+    N         = None
+    
+    E0        = None
+    m0        = 938.272e9 #[eV/c^2]
     
     def __init__(self,N):
         "Construct an empty Bunch object"
@@ -83,6 +96,12 @@ class Ring:
                 assert len(l)==6*6
                 lf = map(float,l)
                 self.elements.append(SectorMapMatrix(lf))
+            elif line[:5]=="RFCAV":
+                l=line[5:].split()
+                assert len(l) == 3, \
+                    "ERROR in Ring::__init__(initStr)::RFCAV while parsing line '"+line+"'"
+                self.elements.append(RFCavity(float(l[0]),float(l[1]),float(l[2])))
+                
             elif line[:9]=="PRINTMEAN":
                 l = line.split()
                 if len(l) == 1:
@@ -92,7 +111,6 @@ class Ring:
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTMEAN while parsing line '"+line+"'"
                     exit(1)
-                    
             elif line[:10]=="PRINTBUNCH":
                 self.elements.append(PrintBunch())
             else:
@@ -125,10 +143,23 @@ class SectorMapTensor(Element):
         "Construct a SectorMapTensor object from an input file fragment"
 
 class RFCavity(Element):
-    def __init__(self):
-        pass
-    def __init__(self,initStr):
-        "Construct a RFCavity object from an input file fragment"
+    voltage=None
+    wavelength=None
+    phase=None
+    def __init__(self,voltage,wavelength,phase):
+        self.voltage    = voltage
+        self.wavelength = wavelength
+        self.phase      = phase
+    def track(self,bunch):
+        deltaE_1 = np.sqrt(bunch.E0**2-bunch.m0**2) * bunch.particles[5,:]
+        deltaE_2 = self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase)
+        #print deltaE_1
+        #print deltaE_2
+        #exit(1)
+        bunch.particles[5,:] = (deltaE_1+deltaE_2)/np.sqrt(bunch.E0**2-bunch.m0**2)
+        
+        return bunch.particles
+        
 class CrabCavity(Element):
     def __init__(self):
         pass
