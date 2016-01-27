@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+assert len(sys.argv)==2, "USAGE: meansFFT.py meansfile"
 
-(x,xp,y,yp,t,pt) = np.loadtxt("means.dat",unpack=True)
-T = np.arange(1,len(x)+1)
+(T,x,xp,y,yp,t,pt) = np.loadtxt(sys.argv[1],unpack=True)
+#T = np.arange(1,len(x)+1)
 
-plt.figure()
-plt.plot(T,x);
+#plt.figure()
+#plt.plot(T,x);
 #plt.show()
 
 F = np.fft.rfftfreq(len(T),1.0)
@@ -28,7 +30,7 @@ plt.plot(F,np.abs(xFFT), label="x")
 #plt.plot(F,np.abs(xpFFT), label="xp")
 plt.plot(F,np.abs(yFFT), label="y")
 #plt.plot(F,np.abs(ypFFT), label="yp")
-plt.plot(F,np.abs(tFFT), label="y")
+plt.plot(F,np.abs(tFFT), label="t")
 plt.legend()
 plt.savefig("FFT2.png")
 plt.xlim(0.3,0.33)
@@ -44,6 +46,8 @@ plt.legend()
 plt.savefig("FFT3.png")
 plt.xlim(0.3,0.33)
 plt.savefig("FFT3-2.png")
+plt.xlim(0.0,0.01)
+plt.savefig("FFT3-3.png")
 
 
 plt.show()

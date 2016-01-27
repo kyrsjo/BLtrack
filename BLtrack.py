@@ -1,5 +1,14 @@
 import numpy as np
 
+def prettyPrint66(M):
+    assert M.shape == (6,6)
+    ret = ""
+    for i in xrange(6):
+        for j in xrange(6):
+            ret += " %15.5g" %(M[i,j],)
+        ret += "\n"
+    return ret
+
 class Beam:
     E0         = None #Beam energy
     bunches    = None #Bunch objects
@@ -13,11 +22,12 @@ class Beam:
         self.bunches    = []
         self.bunches_z0 = []
         
-        print "BEAM"
+        #print "BEAM"
+        
         myBuffer = None
         bufferStatus=None
         for line in initStr.splitlines():
-            print "l=",line
+            #print "l=",line
             if line[:5] == "BUNCH":
                 l = line[5:].split()
                 assert len(l)==8, \
@@ -43,6 +53,11 @@ class Beam:
             
     def sortBunches(self):
         pass
+    def getNumParticles(self):
+        N = 0
+        for bunch in self.bunches:
+            N += bunch.N
+        return N
         
 
 class Bunch:
@@ -85,14 +100,14 @@ class Ring:
         "Construct an empty Ring object"
     def __init__(self,initStr):
         "Construct a Ring object from an input file fragment"
-        print "RING"
+        #print "RING"
         self.elements=[]
         
         for line in initStr.splitlines():
-            print "line=",line
+            #print "line=",line
             if line[:6] == "MATRIX":
                 l = line[6:].split()
-                print l, len(l)
+                #print l, len(l)
                 assert len(l)==6*6
                 lf = map(float,l)
                 self.elements.append(SectorMapMatrix(lf))
@@ -118,22 +133,49 @@ class Ring:
                 exit(1)
     def track(self,beam,turns):
         for i in xrange(turns):
+            if i % 1000 == 0:
+                print "turn %15i /%15i (%5.1f %% )" %(i,turns,float(i)/float(turns)*100)
             for element in self.elements:
                 for bunch in beam.bunches:
-                    bunch.particles=element.track(bunch)
+                    bunch.particles=element.track(bunch,i)
+
+    def getTotalMatrix(self):
+        ret = np.eye(6)
+        for element in self.elements:
+            ret = np.dot(element.getMatrix(),ret)
+        return ret
+
+    def __str__(self):
+        ret = ""
+        for element in self.elements:
+            ret += str(element) + "\n"
+        return ret
+    
+    def getNumElements(self):
+        return len(self.elements)
     
 class Element:
     "Base class for all elements"
     
-    def track(self,bunch):
+    def track(self,bunch,turn):
         return bunch # But it should be modified in-place
+    def getMatrix(self):
+        return np.eye(6)
+    def __str__(self):
+        return "ELEMENT WITHOUT __STR__"
 
 class SectorMapMatrix(Element):
     RE = None #Matrix for tracking (sector- or one-turn-map, as it comes out of MadX)
     def __init__(self,RE):
-        self.RE=np.reshape(np.asarray(RE),(6,6))
-    def track(self,bunch):
+        self.RE=np.reshape(np.asarray(RE),(6,6)).transpose()
+    def track(self,bunch,turn):
         return np.dot(self.RE,bunch.particles)
+    def __str__(self):
+        ret = "SectorMapMatrix:\n"
+        ret += prettyPrint66(self.RE)
+        return ret
+    def getMatrix(self):
+        return self.RE
 
 # class SectorMapTensor(Element):
 #     def __init__(self):
@@ -149,11 +191,14 @@ class RFCavity(Element):
         self.voltage    = voltage
         self.wavelength = wavelength
         self.phase      = phase
-    def track(self,bunch):
+    def track(self,bunch,turn):
         bunch.particles[5,:] += self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
                                 / np.sqrt(bunch.E0**2-bunch.m0**2)
         return bunch.particles
-        
+    def __str__(self):
+        ret = "RFCavity:\n"
+        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
+        return ret
 class CrabCavity(Element):
     voltage    = None # Transverse voltage Vcc [V]
     wavelength = None # 
@@ -171,7 +216,7 @@ class CrabCavity(Element):
         
         self.Vlong      = self.voltage*2*np.pi/self.wavelength*1e3
         
-    def track(self,bunch):
+    def track(self,bunch,turn):
         if self.HoV=='H':
             bunch.particles[1,:] -= self.voltage \
                                     * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
@@ -188,10 +233,18 @@ class CrabCavity(Element):
                                 * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
                                 / np.sqrt(bunch.E0**2-bunch.m0**2)
         return bunch.particles
+    def __str__(self):
+        ret = "CrabCavity:\n\n"
+#        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
+        return ret
         
 class DumpParticles(Element):
     def __init__(self):
         pass
+    def __str__(self):
+        ret = "DumpParticles:\n\n"
+        return ret
+
 class PrintMean(Element):
     fname=None
     ofile=None
@@ -199,12 +252,18 @@ class PrintMean(Element):
         if fname:
             self.fname=fname
             self.ofile=open(fname,'w')
-    def track(self,bunch):
+    def track(self,bunch,turn):
         if self.ofile:
+            self.ofile.write("%i " % (turn,))
             self.ofile.write("%g %g %g %g %g %g\n" % tuple(np.mean(bunch.particles,axis=1)))
         else:
+            print turn,
             print np.mean(bunch.particles,axis=1)
         return bunch.particles
+    def __str__(self):
+        ret = "PrintMean:\n"
+        ret += "fname= '"+str(self.fname)+"'\n\n"
+        return ret
 class PrintBunch(Element):
     fname=None
     ofile=None
@@ -212,11 +271,14 @@ class PrintBunch(Element):
         if fname:
             self.fname=fname
             self.ofile=open(fname,'w')
-    def track(self,bunch):
+    def track(self,bunch,turn):
         print
         print bunch.particles
         return bunch.particles
-
+    def __str__(self):
+        ret = "PrintBunch:\n"
+        ret += "fname= '"+str(self.fname)+"'\n\n"
+        return ret
 
 if __name__=="__main__":
     import sys
@@ -297,9 +359,23 @@ if __name__=="__main__":
         print "No beam was set up"
         exit(1)
     print
+
+    print "Ring:"
+    print myRing
+    print "Total matrix:"
+    totalRE = myRing.getTotalMatrix()
+    print prettyPrint66(totalRE)
+    print "Eigenvalues:"
+    (w, v) = np.linalg.eig(totalRE)
+    for i in xrange(6):
+        print "#%i : abs= %16.10g, angle= %16.10g [2pi] -> "%(i,np.absolute(w[i]), np.angle(w[i])/(2*np.pi)), w[i]
     print
 
     #Track!
+    print "Tracking!"
+    print "# particles = ", myBeam.getNumParticles()
+    print "# elements  = ", myRing.getNumElements()
+    print "# turns     = ", nTurns
     myRing.track(myBeam,nTurns)
     
     #Postprocess? Close files etc.
