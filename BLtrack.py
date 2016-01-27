@@ -65,12 +65,12 @@ class Bunch:
         self.N = N
         #self.particles=np.empty((6,N))
         self.makeGaussian(sigx,sigxp,sigy,sigyp,sigz,sigE)
-        print self.particles
+        #print self.particles
     def makeGaussian(self,sigx,sigxp,sigy,sigyp,sigz,sigE):
         mean=[0.0]*6
         cov=np.diag(v=(sigx,sigxp,sigy,sigyp,sigz,sigE))
-        print mean
-        print cov
+        #print mean
+        #print cov
         self.particles=np.random.multivariate_normal(mean,cov,self.N).transpose()
     
     def getMeans(self):
@@ -129,18 +129,17 @@ class Element:
         return bunch # But it should be modified in-place
 
 class SectorMapMatrix(Element):
+    RE = None #Matrix for tracking (sector- or one-turn-map, as it comes out of MadX)
     def __init__(self,RE):
-        matrix=np.asarray(RE)
-        self.matrix=np.reshape(matrix,(6,6))
-        print self.matrix
+        self.RE=np.reshape(np.asarray(RE),(6,6))
     def track(self,bunch):
-        return np.dot(self.matrix,bunch.particles)
+        return np.dot(self.RE,bunch.particles)
 
-class SectorMapTensor(Element):
-    def __init__(self):
-        pass
-    def __init__(self,initStr):
-        "Construct a SectorMapTensor object from an input file fragment"
+# class SectorMapTensor(Element):
+#     def __init__(self):
+#         pass
+#     def __init__(self,initStr):
+#         "Construct a SectorMapTensor object from an input file fragment"
 
 class RFCavity(Element):
     voltage=None
@@ -151,20 +150,45 @@ class RFCavity(Element):
         self.wavelength = wavelength
         self.phase      = phase
     def track(self,bunch):
-        deltaE_1 = np.sqrt(bunch.E0**2-bunch.m0**2) * bunch.particles[5,:]
-        deltaE_2 = self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase)
-        #print deltaE_1
-        #print deltaE_2
-        #exit(1)
-        bunch.particles[5,:] = (deltaE_1+deltaE_2)/np.sqrt(bunch.E0**2-bunch.m0**2)
-        
+        bunch.particles[5,:] += self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
+                                / np.sqrt(bunch.E0**2-bunch.m0**2)
         return bunch.particles
         
 class CrabCavity(Element):
-    def __init__(self):
-        pass
-    def __init__(self,initStr):
-        "Construct a CrabCavity object from an input file fragment"
+    voltage    = None # Transverse voltage Vcc [V]
+    wavelength = None # 
+    phase      = None # Phase offset, radians
+    HoV        = None # Horizontal('H') or Vertical('V')?
+    
+    Vlong      = None # longitudinal kick voltage = Vcc*omega/c [V/mm]
+    
+    def __init__(self,voltage,wavelength,phase,HorV):
+        self.voltage    = voltage
+        self.wavelength = wavelength
+        self.phase      = phase
+        assert HorV == "H" or HorV=="V"
+        self.HoV = HoV
+        
+        self.Vlong      = self.voltage*2*np.pi/self.wavelength*1e3
+        
+    def track(self,bunch):
+        if self.HoV=='H':
+            bunch.particles[1,:] -= self.voltage \
+                                    * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
+                                    / np.sqrt(bunch.E0**2-bunch.m0**2)
+        elif self.HoV=='V':
+            bunch.particles[3,:] -= self.voltage \
+                                    * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
+                                    / np.sqrt(bunch.E0**2-bunch.m0**2)
+        else:
+            print "WTF in CrabCavity.track()"
+            exit(1)
+        
+        bunch.particles[5,:] += self.Vlong \
+                                * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
+                                / np.sqrt(bunch.E0**2-bunch.m0**2)
+        return bunch.particles
+        
 class DumpParticles(Element):
     def __init__(self):
         pass
@@ -196,6 +220,7 @@ class PrintBunch(Element):
 
 if __name__=="__main__":
     import sys
+    import os
     inputFile = None
     if len(sys.argv) != 2:
         print "Usage: BLtrack.py inputfile"
@@ -229,7 +254,20 @@ if __name__=="__main__":
                 myBuffer=None
                 bufferStatus=None
                 continue
-            myBuffer+=line #Should include the newline...
+            elif line[:10] == "IMPORTFILE":
+                ls = line.split()
+                assert len(ls) == 2
+                ifname2=os.path.join(os.path.dirname(inputFile), ls[1])
+                
+                ifile2 = open(ifname2,'r')
+                for line2 in ifile2:
+                    if line2[0]=="/":
+                        continue
+                    assert line2[:4] != "NEXT"
+                    myBuffer+=line2
+                ifile2.close()
+            else:
+                myBuffer+=line #Should include the newline...
             continue
             
         if line[:4]=="RING":
