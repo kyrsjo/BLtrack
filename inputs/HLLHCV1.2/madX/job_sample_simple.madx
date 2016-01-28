@@ -9,10 +9,38 @@ exec,mk_beam(7000);
 
 call,file="slhc/opt_round.madx"; ! For thick optics
 exec,crossing_enable;
-exec,check_ip(b1); exec,check_ip(b2);
+exec,check_ip(b1);! exec,check_ip(b2);
 
-print, text="TEST";
+!print, text="TEST";
 
+// Make the TFS table for the rmatrices
 select, flag=twiss, clear;
 select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE;
-twiss,rmatrix=true,file="test.tfs",chrom=true;
+twiss,rmatrix=true,file="RE_B1.tfs",chrom=true,sectormap=true,sectorfile="SECTOR_B1.tfs";
+
+// Make the TFS table for the sectormap
+select, flag=sectormap, clear;
+!select,flag=sectormap, column=NAME,POS,R;
+select,flag=sectormap, pattern="^ACFCA";
+select,flag=sectormap, pattern="^ACSCA";
+select,flag=sectormap, pattern="^IP";
+twiss,sectormap=true,chrom=true,sectorfile="SECTOR_B1_allcav.tfs";
+
+select, flag=sectormap, clear;
+!select,flag=sectormap, column=NAME,POS,R;
+!select,flag=sectormap, pattern="^ACFCA";
+!select,flag=sectormap, pattern="^ACSCA";
+!select,flag=sectormap, pattern="^IP";
+select,flag=sectormap, pattern="^IP";
+twiss,sectormap=true,chrom=true,sectorfile="SECTOR_B1_IP.tfs";
+
+select, flag=sectormap, clear;
+select,flag=sectormap, pattern="^IP1";
+twiss,sectormap=true,chrom=true,sectorfile="SECTOR_B1_IP1.tfs";
+
+select, flag=sectormap, clear;
+!select,flag=sectormap, column=NAME,POS,R;
+!select,flag=sectormap, pattern="^ACFCA";
+select,flag=sectormap, pattern="^ACSCA";
+select,flag=sectormap, pattern="^IP";
+twiss,sectormap=true,chrom=true,sectorfile="SECTOR_B1_acsca.tfs";
