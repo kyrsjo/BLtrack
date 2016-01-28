@@ -133,8 +133,8 @@ class Ring:
                 exit(1)
     def track(self,beam,turns):
         for i in xrange(turns):
-            if i % 1000 == 0:
-                print "turn %15i /%15i (%5.1f %% )" %(i,turns,float(i)/float(turns)*100)
+            if (i+1)%1000 == 0 or (i+1)==turns:
+                print "turn %15i /%15i (%5.1f %% )" %(i+1,turns,float(i+1)/float(turns)*100)
             for element in self.elements:
                 for bunch in beam.bunches:
                     bunch.particles=element.track(bunch,i)
@@ -167,7 +167,7 @@ class Element:
 class SectorMapMatrix(Element):
     RE = None #Matrix for tracking (sector- or one-turn-map, as it comes out of MadX)
     def __init__(self,RE):
-        self.RE=np.reshape(np.asarray(RE),(6,6)).transpose()
+        self.RE=np.reshape(np.asarray(RE),(6,6))
     def track(self,bunch,turn):
         return np.dot(self.RE,bunch.particles)
     def __str__(self):
