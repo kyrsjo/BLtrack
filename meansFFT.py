@@ -46,7 +46,7 @@ plt.legend()
 plt.savefig("FFT3.png")
 plt.xlim(0.3,0.33)
 plt.savefig("FFT3-2.png")
-plt.xlim(0.0,0.01)
+plt.xlim(0.0,0.002)
 plt.savefig("FFT3-3.png")
 
 
