@@ -36,7 +36,14 @@ class Ring:
                     print "Error in Ring::__init__(initStr)::PRINTMEAN while parsing line '"+line+"'"
                     exit(1)
             elif line[:10]=="PRINTBUNCH":
-                self.elements.append(PrintBunch())
+                l = line.split()
+                if len(l) == 1:
+                    self.elements.append(PrintBunch(None))
+                elif len(l) == 2:
+                    self.elements.append(PrintBunch(l[1]))
+                else:
+                    print "Error in Ring::__init__(initStr)::PRINTBUNCH while parsing line '"+line+"'"
+                    exit(1)
             else:
                 print "Error in Ring::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
@@ -147,13 +154,6 @@ class CrabCavity(Element):
 #        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
         return ret
         
-class DumpParticles(Element):
-    def __init__(self):
-        pass
-    def __str__(self):
-        ret = "DumpParticles:\n\n"
-        return ret
-
 class PrintMean(Element):
     fname=None
     ofile=None
@@ -180,9 +180,14 @@ class PrintBunch(Element):
         if fname:
             self.fname=fname
             self.ofile=open(fname,'w')
+            self.ofile.write("# turn ID X[m] PX[px/p0] Y[m] PY[py/p0] T[=-ct, m] PT[=DeltaE/(p_s*c)]\n")
     def track(self,bunch,turn):
-        print
-        print bunch.particles
+        for i in xrange(bunch.particles.shape[1]):
+            outstring = "%i %i %g %g %g %g %g %g" % ((turn,i)+tuple(bunch.particles[:,i]))
+            if self.ofile!=None:
+                self.ofile.write(outstring+"\n")
+            else:
+                print outstring
         return bunch.particles
     def __str__(self):
         ret = "PrintBunch:\n"
