@@ -1,9 +1,14 @@
 import numpy as np
 
 class Beam:
-    E0         = None #Beam energy
-    bunches    = None #Bunch objects
-    bunches_z0 = None #Time of z=0 for the bunch objects, relative to some particle on the design orbit
+    E0         = None      #Beam energy [eV]
+    beta0      = None      #Beam beta factor
+    gamma0     = None      #Beam gamma factor
+    m0         = 938.272e6 #Beam particles rest mass [eV/c^2] (default proton)
+    p0         = None      #Beam momentum [eV/c]
+    
+    bunches    = None      #Bunch objects
+    bunches_z0 = None      #Time of z=0 for the bunch objects, relative to some particle on the design orbit
     
     def __init__(self):
         "Construct an empty Beam object"
@@ -27,7 +32,7 @@ class Beam:
                 N=int(l[1])
                 lf = map(float,l[2:])
                 self.bunches.append(Bunch(N, lf[0],lf[1],lf[2],lf[3],lf[4],lf[5]))
-                self.bunches[-1].E0 = self.E0
+                self.bunches[-1].beam = self
                 #print self.bunches[-1].particles
                 
             elif line[:6] == "ENERGY":
@@ -35,8 +40,10 @@ class Beam:
                 assert len(l)==1,\
                     "Expected format: 'ENERGY E0[eV]', got: "+str(len(l))+" "+str(l)
                 assert self.E0==None
-                self.E0 = float(l[0])
-                
+                self.E0     = float(l[0])
+                self.gamma0 = self.E0/self.m0
+                self.beta0  = np.sqrt((1.0-1.0/np.sqrt(self.gamma0))*(1.0+1.0/np.sqrt(self.gamma0)))
+                self.p0     = np.sqrt((self.E0-self.m0)*(self.E0+self.m0))
             else:
                 print "Error in Beam::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
@@ -49,6 +56,14 @@ class Beam:
         for bunch in self.bunches:
             N += bunch.N
         return N
+
+    def __str__(self):
+        ret = ""
+        ret += "E0     = " +str(self.E0/1e9)+ " [GeV]\n"
+        ret += "gamma0 = " +str(self.gamma0)+ "\n"
+        ret += "beta0  = " +str(self.beta0) + "\n"
+        ret += "p0     = " +str(self.p0/1e9)+ " [GeV/c]\n"
+        return ret
         
 
 class Bunch:
@@ -60,8 +75,8 @@ class Bunch:
     particles = None
     N         = None
     
-    E0        = None
-    m0        = 938.272e9 #[eV/c^2]
+    beam      = None #Pointer back to the beam object
+
     
     def __init__(self,N):
         "Construct an empty Bunch object"

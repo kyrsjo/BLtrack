@@ -95,6 +95,10 @@ for i in xrange(6):
     print "#%i : abs= %16.10g, angle= %16.10g [2pi] -> "%(i,np.absolute(w[i]), np.angle(w[i])/(2*np.pi)), w[i]
 print
 
+print "Beam:"
+print myBeam
+print
+
 #Track!
 print "Tracking!"
 print "# particles = ", myBeam.getNumParticles()
