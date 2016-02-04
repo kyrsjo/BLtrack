@@ -63,6 +63,10 @@ class Beam:
         ret += "gamma0 = " +str(self.gamma0)+ "\n"
         ret += "beta0  = " +str(self.beta0) + "\n"
         ret += "p0     = " +str(self.p0/1e9)+ " [GeV/c]\n"
+        ret += "N      = " +str(self.getNumParticles())+"\n"
+        for (bunch,z) in zip(self.bunches,self.bunches_z0):
+            ret += "Bunch: t = "+str(z)+"\n"
+            ret += "\t Means = "+str(bunch)+"\n"
         return ret
         
 
@@ -82,21 +86,24 @@ class Bunch:
         "Construct an empty Bunch object"
         self.N=N
         self.particles=np.zeros((6,N))
-    def __init__(self,N,sigx,sigxp,sigy,sigyp,sigz,sigE):
+    def __init__(self,N,sigx,sigxp,sigy,sigyp,sigt,sigPT):
         self.N = N
         #self.particles=np.empty((6,N))
-        self.makeGaussian(sigx,sigxp,sigy,sigyp,sigz,sigE)
+        self.makeGaussian(sigx,sigxp,sigy,sigyp,sigt,sigPT)
         #print self.particles
-    def makeGaussian(self,sigx,sigxp,sigy,sigyp,sigz,sigE):
+    def makeGaussian(self,sigx,sigxp,sigy,sigyp,sigt,sigPT):
         mean=[0.0]*6
         #mean[4]+=2.0*sigz
         #mean[5]-=2.0*sigE
-        cov=np.diag(v=(sigx,sigxp,sigy,sigyp,sigz,sigE))
+        cov=np.diag(v=(sigx,sigxp,sigy,sigyp,sigt,sigPT))
         #print mean
         #print cov
         self.particles=np.random.multivariate_normal(mean,cov,self.N).transpose()
     
     def getMeans(self):
-        pass
+        return np.mean(self.particles,axis=1)
     def getSigmaMatrix(self):
         pass
+    
+    def __str__(self):
+        return str(self.getMeans())

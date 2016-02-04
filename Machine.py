@@ -166,10 +166,10 @@ class PrintMean(Element):
     def track(self,bunch,turn):
         if self.ofile:
             self.ofile.write("%i " % (turn,))
-            self.ofile.write("%g %g %g %g %g %g\n" % tuple(np.mean(bunch.particles,axis=1)))
+            self.ofile.write("%g %g %g %g %g %g\n" % tuple(bunch.getMeans()))
         else:
             print turn,
-            print np.mean(bunch.particles,axis=1)
+            print bunch.getMeans()
         return bunch.particles
     def __str__(self):
         ret = "PrintMean:\n"
