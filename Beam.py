@@ -4,7 +4,7 @@ class Beam:
     E0         = None      #Beam energy [eV]
     beta0      = None      #Beam beta factor
     gamma0     = None      #Beam gamma factor
-    m0         = 938.272e6 #Beam particles rest mass [eV/c^2] (default proton)
+    m0         = 938.272e6 #Beam particles rest mass [eV/c^2] (default: proton)
     p0         = None      #Beam momentum [eV/c]
     
     bunches    = None      #Bunch objects
@@ -89,6 +89,8 @@ class Bunch:
         #print self.particles
     def makeGaussian(self,sigx,sigxp,sigy,sigyp,sigz,sigE):
         mean=[0.0]*6
+        #mean[4]+=2.0*sigz
+        #mean[5]-=2.0*sigE
         cov=np.diag(v=(sigx,sigxp,sigy,sigyp,sigz,sigE))
         #print mean
         #print cov

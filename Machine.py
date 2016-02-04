@@ -108,8 +108,7 @@ class RFCavity(Element):
         self.wavelength = wavelength
         self.phase      = phase
     def track(self,bunch,turn):
-        bunch.particles[5,:] += self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
-                                / np.sqrt(bunch.beam.E0**2-bunch.beam.m0**2)
+        bunch.particles[5,:] += self.voltage*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
         #print np.sqrt(bunch.E0**2-bunch.m0**2)
         #print self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase)
         #print bunch.particles[5,:]
