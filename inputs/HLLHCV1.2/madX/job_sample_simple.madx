@@ -5,11 +5,10 @@ system,"ln -fns /afs/cern.ch/eng/lhc/optics/V6.503 db5";
 option, -echo, -warn,info;
 call,file="slhc/toolkit/macro.madx";
 call,file="slhc/hllhc.seq";
-exec,mk_beam(7000); ! makes both beams
+exec,mk_beam(7000); ! makes both beams; energy in GeV.
 
 call,file="slhc/opt_round.madx"; ! For thick optics
 exec,crossing_enable;
-vrf400=16;
 exec,check_ip(b1);! exec,check_ip(b2);
 
 // Make the TFS table for the rmatrices
@@ -17,14 +16,18 @@ select, flag=twiss, clear;
 select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE;
 twiss,rmatrix=true,file="RE_B1.tfs",chrom=true,sectormap=true,sectorfile="SECTOR_B1.tfs";
 
+
 print, text="";
 print, text="Synchrotron tune calculation:";
+vrf400=16.0; ! Total voltage in MV.
 real eta0 = table(SUMM,alfa) - 1.0/(beam%lhcb1->gamma)^2;
-value, eta0, hrf400, vrf400,beam%lhcb1->beta;
-real Qs = sqrt(hrf400*vrf400*eta0 / (2.0*pi * beam%lhcb1->beta^2 * beam%lhcb1->energy));
-value, Qs;
+value, eta0, hrf400, vrf400,beam%lhcb1->energy,beam%lhcb1->beta;
+real Qs = sqrt(hrf400*vrf400*eta0 / (2.0*pi * (beam%lhcb1->beta)^2 * beam%lhcb1->energy*1e3));
+value, Qs, 1.0/Qs;
 print, text="";
+vrf400=0.0; ! Set it back to 0.0, else twiss won't work.
 !exit;
+
 
 // Make the TFS table for the sectormap
 select, flag=sectormap, clear;
@@ -52,8 +55,3 @@ select, flag=sectormap, clear;
 select,flag=sectormap, pattern="^ACSCA";
 select,flag=sectormap, pattern="^IP";
 twiss,sectormap=true,chrom=true,sectorfile="SECTOR_B1_acsca.tfs";
-
-!BEAM%lhcb1->radiate=true;
-!show, BEAM%lhcb1;
-!EMIT;
-!show, BEAM%lhcb1;
