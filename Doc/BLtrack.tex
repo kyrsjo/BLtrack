@@ -1,0 +1,60 @@
+\documentclass[a4paper]{report}
+\title{BLtrack documentation}
+\author{Kyrre Sjobak}
+
+\usepackage{hyperref}
+\usepackage{algorithmic}
+
+\begin{document}
+\maketitle
+\newpage
+\tableofcontents
+
+\chapter{Introduction}
+
+The BLtrack program is written to study the effect of beam loading in crab cavities.
+It can track several bunches of particles in a 6D phase space, and allows the elements to change dynamically over time, including responding dynamically to the beam.
+Most of the BLtrack input is meant to be exported from MadX, permitting easy set-up of a new configuration.
+
+\section{Program structure}
+The program structure is split in two main classes: \texttt{Beam} and \texttt{Ring}.
+These then hold objects of classes inheriting from the \texttt{Bunch} and \texttt{Element} classes.
+
+To start tracking, the \texttt{Machine} object has a method \texttt{track(beam,turns)} which tracks the provided \texttt{Beam} object through the ring the given number of turns.
+The algorithm used to track all the particles through all the elements for the required number of turns is very simple:
+\begin{algorithmic}
+  \FOR{$t=0$ \TO $\mathtt{turns}-1$}
+    \FOR{\texttt{element} in \texttt{elements}}
+      \FOR{\texttt{bunch} in \texttt{bunches}}
+        \STATE \texttt{bunch}.\texttt{particles} = \texttt{element}.\texttt{track}(\texttt{bunch},$t$)
+      \ENDFOR
+    \ENDFOR
+  \ENDFOR
+\end{algorithmic}
+
+Finally there is the main executable, \texttt{BLtrack.py}.
+This reads an input file, parses some sections of it directly, and passes the \texttt{BEAM} and \texttt{RING} blocks on to the relevant constructors.
+
+\section{Input file structure}
+The input file is based on newline-separated statements, identified by the first word in that statement.
+
+
+\chapter{Beam definition}
+
+
+\chapter{Machine elements}
+\section{SectorMapMatrix}
+\section{RFcavitiy}
+\section{CrabCavity}
+\section{PrintMean}
+\section{PrintBunch}
+
+\appendix
+\chapter{Creating a machine definition from MadX}
+
+\chapter{Testing for correctness}
+\section{Betatron tune}
+
+\section{Synchrotron tune}
+
+\end{document}
