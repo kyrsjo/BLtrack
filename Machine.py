@@ -4,7 +4,8 @@ import util
 
 class Ring:
     elements=None
-
+    length=None # Total length of the machine [m]
+    
     def __init__(self):
         "Construct an empty Ring object"
     def __init__(self,initStr):
@@ -44,6 +45,8 @@ class Ring:
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTBUNCH while parsing line '"+line+"'"
                     exit(1)
+            elif line[:10]=="RINGLENGTH":
+                self.length = float(line[10:])
             else:
                 print "Error in Ring::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
