@@ -37,7 +37,13 @@ This reads an input file, parses some sections of it directly, and passes the \t
 
 \section{Input file structure}
 The input file is based on newline-separated statements, identified by the first word in that statement.
-
+The main keywords are:
+\begin{description}
+\item[/\textit{whatever}] 
+\item[TURNS \textit{int}] The number of turns to track.
+\end{description}
+Additionally There are also two possible blocks, identified by the keywords \texttt{BEAM} and \texttt{RING}.
+These 
 
 \chapter{Beam definition}
 
