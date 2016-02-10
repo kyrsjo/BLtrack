@@ -103,9 +103,9 @@ class SectorMapMatrix(Element):
 #         "Construct a SectorMapTensor object from an input file fragment"
 
 class RFCavity(Element):
-    voltage=None
-    wavelength=None
-    phase=None
+    voltage    = None # [V]
+    wavelength = None # [m]
+    phase      = None # [rad]
     def __init__(self,voltage,wavelength,phase):
         self.voltage    = voltage
         self.wavelength = wavelength

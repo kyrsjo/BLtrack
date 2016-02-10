@@ -4,6 +4,8 @@
 
 \usepackage{hyperref}
 \usepackage{algorithmic}
+%\usepackage{todonotes}
+\usepackage{amsmath}
 
 \begin{document}
 \maketitle
@@ -37,26 +39,89 @@ This reads an input file, parses some sections of it directly, and passes the \t
 
 \section{Input file structure}
 The input file is based on newline-separated statements, identified by the first word in that statement.
-The main keywords are:
+The keywords are:
 \begin{description}
-\item[/\textit{whatever}] 
+\item[/\textit{any text}] A comment, which is ignored.
 \item[TURNS \textit{int}] The number of turns to track.
+\item[BEAM] Indicates the start of a \texttt{BEAM} block, which is parsed as described in Section~\ref{sec:beam}.
+\item[RING] Indicates the start of a \texttt{RING} block, which is parsed as described in Section~\ref{sec:machine}.
+\item[IMPORTFILE \textit{filename}] Accepted inside a \texttt{BEAM} or \texttt{RING} block, causing the content inside the file (one or more lines) to be read and used in the place of this line.
+\item[NEXT] Indicates the end of the current block, and transfers the content of the block (including the content of any \texttt{IMPORTFILE}s) to the constructor of the \texttt{Beam} or \texttt{Ring} for parsing.
 \end{description}
-Additionally There are also two possible blocks, identified by the keywords \texttt{BEAM} and \texttt{RING}.
-These 
 
 \chapter{Beam definition}
+\label{sec:beam}
+
+%\todo[inline]{Parsing}
+
+Each tracked particle is described by its position in a 6D phase-space.
+The coordinates and their units are the same as in MadX (CITE MadX manual):
+\begin{description}
+\item[X]  Position in the horizontal direction [m].
+\item[PX] Fractional transverse momentum in the horizontal direction $p_x/p_0$.
+\item[Y]  Position in the horizontal direction [m].
+\item[PY] Fractional transverse momentum in the vertical direction $p_y/p_0$.
+\item[T]  Position relative to a reference particle, i.e.\ $\mathrm{T}=-c t$ [m]. Thus a positive T implies that the particle arrives ahead of the reference particle ($t=0$).
+\item[PT] Normalized energy error $\Delta E/(p_s c)$.
+\end{description}
+Here $p_0$ is the design momentum of the machine, and $p_s$ the reference momentum.
+They are related through the variable $\mathrm{DELTAP} = (p_s-p_0)/p_0$, which is assumed to be 0 $\Rightarrow p_s=p_0$.
+
+The \texttt{Beam} oject holds one or more \texttt{Bunch} objects, which again holds the actual particles to be tracked. Further, it reads the beams total (design) energy $\mathtt{E0}$ [eV] from the input file, and uses it to compute the following related variables:
+\begin{equation}
+  \mathtt{gamma0} = \gamma_0 = E_0/m_0
+\end{equation}
+\begin{equation}
+  \mathtt{beta0} = \beta_0 = \sqrt{\left(1-1/\gamma_0\right) \left(1+1/\gamma_0\right)}
+\end{equation}
+\begin{equation}
+  \mathtt{p0} = p_0 = \sqrt{\left(E_0-m_0\right) \left(E_0-m_0\right)}
+  \label{eq:designmomentum}
+\end{equation}
+Here the variable m0 [eV/c\textsuperscript{2}] is the beam particle's rest mass, which by default is equal to the proton mass at 938.272 MeV/c\textsuperscript{2}.
+
+TODO: Multiple particles / storage of particle array, coupling to SectorMapMatrix (matrix orientation) \ldots
+
+TODO: Input file reading.
+
+\chapter{Machine description}
+\label{sec:machine}
+
+%\todo[inline]{Parsing}
 
 
-\chapter{Machine elements}
-\section{SectorMapMatrix}
-\section{RFcavitiy}
-\section{CrabCavity}
-\section{PrintMean}
-\section{PrintBunch}
+\section{Elements}
+All elements inherit from the same \texttt{Element} class, and must inplement a constructor and the methods \texttt{track}(\texttt{bunch}, \texttt{turn}), \texttt{getMatrix}(), and \texttt{\_\_str\_\_}().
+
+\subsection{SectorMapMatrix}
+This element describes a part of the machine as a $6 \times 6$ matrix, which when multiplied with the particle vector describe the linear effect of a part of the lattice.
+The matrix can be extracted from MadX as a one turn map or as a sectormap (see section~\ref{sec:MadX})
+
+TODO: Input
+
+\subsection{RFcavitiy}
+
+This element implements an accelerating RF cavity.
+The necessary input is the voltage $V$ [Volts], wavelength $\lambda$ [m], and phase $\phi$ [radians].
+The applied kick is then
+\begin{equation}
+  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{\sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right)}{p_0 c}~,
+\end{equation}
+where it is assumed that $p_s = p_0$.
+The design momentum is taken from the beam object, where it is calculated as described in Equation~\eqref{eq:designmomentum}.
+
+
+TODO: Input
+
+TODO: Matrix implementation
+
+\subsection{CrabCavity}
+\subsection{PrintMean}
+\subsection{PrintBunch}
 
 \appendix
 \chapter{Creating a machine definition from MadX}
+\label{sec:MadX}
 
 \chapter{Testing for correctness}
 \section{Betatron tune}
