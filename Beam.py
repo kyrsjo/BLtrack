@@ -24,8 +24,9 @@ class Beam:
         bufferStatus=None
         for line in initStr.splitlines():
             #print "l=",line
-            if line[:5] == "BUNCH":
-                l = line[5:].split()
+            lsp = line.split()
+            if lsp[0] == "BUNCH":
+                l = lsp[1:]
                 assert len(l)==8, \
                     "Expected format: BUNCH t Nparticles sigx sigxp sigy sigyp sigz sigzp"
                 self.bunches_z0.append(float(l[0]))
@@ -35,8 +36,8 @@ class Beam:
                 self.bunches[-1].beam = self
                 #print self.bunches[-1].particles
                 
-            elif line[:6] == "ENERGY":
-                l=line[6:].split()
+            elif lsp[0] == "ENERGY":
+                l=lsp[1:]
                 assert len(l)==1,\
                     "Expected format: 'ENERGY E0[eV]', got: "+str(len(l))+" "+str(l)
                 assert self.E0==None

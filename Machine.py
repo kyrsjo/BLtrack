@@ -15,38 +15,47 @@ class Ring:
         
         for line in initStr.splitlines():
             #print "line=",line
-            if line[:6] == "MATRIX":
-                l = line[6:].split()
+            lsp = line.split()
+            
+            if lsp[0] == "MATRIX":
+                l = lsp[1:]
                 #print l, len(l)
                 assert len(l)==6*6
                 lf = map(float,l)
                 self.elements.append(SectorMapMatrix(lf))
-            elif line[:5]=="RFCAV":
-                l=line[5:].split()
+            elif lsp[0]=="RFCAV":
+                l=lsp[1:]
                 assert len(l) == 3, \
                     "ERROR in Ring::__init__(initStr)::RFCAV while parsing line '"+line+"'"
                 self.elements.append(RFCavity(float(l[0]),float(l[1]),float(l[2])))
+            elif lsp[0]=="RFCAV_MATRIX":
+                l=lsp[1:]
+                if len(l) == 4:
+                    self.elements.append(RFCavity_Matrix(float(l[0]),float(l[1]),float(l[2]),float(l[3])))
+                elif len(l)== 5:
+                    self.elements.append(RFCavity_Matrix(float(l[0]),float(l[1]),float(l[2]),float(l[3]),float(l[4])))
+                else:
+                    print "ERROR in Ring::__init__(initStr)::RFCAV_MATRIX while parsing line '"+line+"'"
+
                 
-            elif line[:9]=="PRINTMEAN":
-                l = line.split()
-                if len(l) == 1:
+            elif lsp[0]=="PRINTMEAN":
+                if len(lsp) == 1:
                     self.elements.append(PrintMean(None))
-                elif len(l) == 2:
-                    self.elements.append(PrintMean(l[1]))
+                elif len(lsp) == 2:
+                    self.elements.append(PrintMean(lsp[1]))
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTMEAN while parsing line '"+line+"'"
                     exit(1)
-            elif line[:10]=="PRINTBUNCH":
-                l = line.split()
-                if len(l) == 1:
+            elif lsp[0]=="PRINTBUNCH":
+                if len(lsp) == 1:
                     self.elements.append(PrintBunch(None))
-                elif len(l) == 2:
-                    self.elements.append(PrintBunch(l[1]))
+                elif len(lsp) == 2:
+                    self.elements.append(PrintBunch(lsp[1]))
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTBUNCH while parsing line '"+line+"'"
                     exit(1)
-            elif line[:10]=="RINGLENGTH":
-                self.length = float(line[10:])
+            elif lsp[0]=="RINGLENGTH":
+                self.length = float(lsp[1])
             else:
                 print "Error in Ring::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
@@ -106,20 +115,49 @@ class RFCavity(Element):
     voltage    = None # [V]
     wavelength = None # [m]
     phase      = None # [rad]
+    
     def __init__(self,voltage,wavelength,phase):
         self.voltage    = voltage
         self.wavelength = wavelength
         self.phase      = phase
+        
     def track(self,bunch,turn):
         bunch.particles[5,:] += self.voltage*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
-        #print np.sqrt(bunch.E0**2-bunch.m0**2)
-        #print self.voltage*np.sin(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase)
-        #print bunch.particles[5,:]
         return bunch.particles
     def __str__(self):
         ret = "RFCavity:\n"
         ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
         return ret
+
+class RFCavity_Matrix(Element):
+    voltage    = None # [V]
+    wavelength = None # [m]
+    phase      = None # [rad]
+    
+    E0 = None # Beam energy [eV]
+    m0 = None # Beam particle mass [eV/c^2]
+    p0 = None # Reference momentum
+    
+    RE = None
+    
+    def __init__(self,voltage,wavelength,phase, E0, m0=938.272e6):
+        self.voltage    = voltage
+        self.wavelength = wavelength
+        self.phase      = phase
+        
+        self.E0 = E0
+        self.m0 = m0
+        self.p0 = np.sqrt((self.E0-self.m0)*(self.E0+self.m0))
+        
+        self.RE = np.eye(6)
+        self.RE[5,4] = self.voltage*(2*np.pi/self.wavelength) / self.p0
+
+    def track(self,bunch,turn):        
+        return np.dot(self.RE,bunch.particles)
+    def getMatrix(self):
+        return self.RE
+
+
 class CrabCavity(Element):
     voltage    = None # Transverse voltage Vcc [V]
     wavelength = None # 

@@ -26,9 +26,12 @@ for line in ifile:
     #print "bufferStatus=",bufferStatus
     if line[0]== "/": # Comment
         continue
-
+    
+    #Tokenize
+    lsp = line.split()
+    
     if bufferStatus:
-        if line[:4]=="NEXT":
+        if lsp[0]=="NEXT":
             #Construct ring/beam/... depending on the contents of BufferStatus
             if bufferStatus=="RING":
                 myRing=Machine.Ring(myBuffer)
@@ -40,10 +43,9 @@ for line in ifile:
             myBuffer=None
             bufferStatus=None
             continue
-        elif line[:10] == "IMPORTFILE":
-            ls = line.split()
-            assert len(ls) == 2
-            ifname2=os.path.join(os.path.dirname(inputFile), ls[1])
+        elif lsp[0] == "IMPORTFILE":
+            assert len(lsp) == 2
+            ifname2=os.path.join(os.path.dirname(inputFile), lsp[1])
 
             ifile2 = open(ifname2,'r')
             for line2 in ifile2:
@@ -56,18 +58,18 @@ for line in ifile:
             myBuffer+=line #Should include the newline...
         continue
 
-    if line[:4]=="RING":
+    if lsp[0]=="RING":
         bufferStatus="RING"
         myBuffer=""
         continue
-    elif line[:4]=="BEAM":
+    elif lsp[0]=="BEAM":
         bufferStatus="BEAM"
         myBuffer=""
         continue
-    elif line[:5]=="TURNS":
-        nTurns = int(line[5:])
+    elif lsp[0]=="TURNS":
+        nTurns = int(lsp[1])
         continue
-    elif line[:3]=="END":
+    elif lsp[0]=="END":
         break
     else:
         print "Error while parsing file; line not understood:"
@@ -89,10 +91,11 @@ print myRing
 print "Total matrix:"
 totalRE = myRing.getTotalMatrix()
 print util.prettyPrint66(totalRE)
-print "Eigenvalues:"
+print "Eigenvalues and vectors:"
 (w, v) = np.linalg.eig(totalRE)
 for i in xrange(6):
     print "#%i : abs= %16.10g, angle= %16.10g [2pi] -> "%(i,np.absolute(w[i]), np.angle(w[i])/(2*np.pi)), w[i]
+    #print "\t", v[i] #Complex vector, needs some better formatting...
 print
 
 print "Beam:"
