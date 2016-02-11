@@ -3,8 +3,8 @@ import numpy as np
 import util
 
 class Ring:
-    elements=None
-    length=None # Total length of the machine [m]
+    elements = None
+    length   = None # Total length of the machine [m]
     
     def __init__(self):
         "Construct an empty Ring object"
@@ -23,11 +23,13 @@ class Ring:
                 assert len(l)==6*6
                 lf = map(float,l)
                 self.elements.append(SectorMapMatrix(lf))
+                self.elements[-1].ring=self
             elif lsp[0]=="RFCAV":
                 l=lsp[1:]
                 assert len(l) == 3, \
                     "ERROR in Ring::__init__(initStr)::RFCAV while parsing line '"+line+"'"
                 self.elements.append(RFCavity(float(l[0]),float(l[1]),float(l[2])))
+                self.elements[-1].ring=self
             elif lsp[0]=="RFCAV_MATRIX":
                 l=lsp[1:]
                 if len(l) == 4:
@@ -36,12 +38,13 @@ class Ring:
                     self.elements.append(RFCavity_Matrix(float(l[0]),float(l[1]),float(l[2]),float(l[3]),float(l[4])))
                 else:
                     print "ERROR in Ring::__init__(initStr)::RFCAV_MATRIX while parsing line '"+line+"'"
+                self.elements[-1].ring=self
             elif lsp[0]=="RFCAV_LOADING":
                 l=lsp[1:]
                 assert len(l) == 4, \
                     "ERROR in Ring::__init__(initStr)::RFCAV_LOADING while parsing line '"+line+"'"
                 self.elements.append(RFCavity_loading(float(l[0]),float(l[1]),float(l[2]),float(l[3])))
-                
+                self.elements[-1].ring=self
             elif lsp[0]=="PRINTMEAN":
                 if len(lsp) == 1:
                     self.elements.append(PrintMean(None))
@@ -50,6 +53,7 @@ class Ring:
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTMEAN while parsing line '"+line+"'"
                     exit(1)
+                self.elements[-1].ring=self
             elif lsp[0]=="PRINTBUNCH":
                 if len(lsp) == 1:
                     self.elements.append(PrintBunch(None))
@@ -58,6 +62,7 @@ class Ring:
                 else:
                     print "Error in Ring::__init__(initStr)::PRINTBUNCH while parsing line '"+line+"'"
                     exit(1)
+                self.elements[-1].ring=self
             elif lsp[0]=="RINGLENGTH":
                 self.length = float(lsp[1])
             else:
@@ -88,6 +93,8 @@ class Ring:
     
 class Element:
     "Base class for all elements"
+    
+    ring = None #Pointer back to Ring object
     
     def track(self,bunch,turn):
         return bunch # But it should be modified in-place
