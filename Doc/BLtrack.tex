@@ -6,6 +6,7 @@
 \usepackage{algorithmic}
 %\usepackage{todonotes}
 \usepackage{amsmath}
+\usepackage{amsfonts}
 
 \begin{document}
 \maketitle
@@ -94,26 +95,49 @@ TODO: Input file reading.
 All elements inherit from the same \texttt{Element} class, and must inplement a constructor and the methods \texttt{track}(\texttt{bunch}, \texttt{turn}), \texttt{getMatrix}(), and \texttt{\_\_str\_\_}().
 
 \subsection{SectorMapMatrix}
-This element describes a part of the machine as a $6 \times 6$ matrix, which when multiplied with the particle vector describe the linear effect of a part of the lattice.
+This element describes a part of the machine as a $6 \times 6$ matrix $\mathbf{R}$, which when multiplied with the particle vector describe the linear effect of a part of the lattice.
 The matrix can be extracted from MadX as a one turn map or as a sectormap (see section~\ref{sec:MadX})
 
 TODO: Input
 
-\subsection{RFcavitiy}
+\subsection{RFcavity}
 
 This element implements an accelerating RF cavity.
 The necessary input is the voltage $V$ [Volts], wavelength $\lambda$ [m], and phase $\phi$ [radians].
 The applied kick is then
 \begin{equation}
-  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{\sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right)}{p_0 c}~,
+  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{V \sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right)}{p_0 c}~,
 \end{equation}
-where it is assumed that $p_s = p_0$.
+where it is assumed that $p_s = p_0$ and that the particle charge is $e$.
 The design momentum is taken from the beam object, where it is calculated as described in Equation~\eqref{eq:designmomentum}.
 
 
 TODO: Input
 
-TODO: Matrix implementation
+\subsection{RFcavity\_Matrix}
+
+This element also implements an accelerating RF cavity, in a linearized approximation.
+For this, a Taylor-expansion of the $\sin$ function is used, such that
+\begin{equation}
+  \begin{split}
+    \sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right) =& \sin\left(\frac{2\pi \mathtt{T} }{\lambda}\right)\cos\phi + \cos\left(\frac{2\pi \mathtt{T} }{\lambda}\right)\cos\phi \\
+    =&
+    \sum_{n=0}^\infty \left( \frac{(-1)^n}{(2n+1)!} \left(\frac{2\pi \mathtt{T}}{\lambda}\right)^{2n+1} \right) \cos\phi \\
+    +& 
+    \sum_{n=0}^\infty \left( \frac{(-1)^n}{(2n)!} \left(\frac{2\pi \mathtt{T}}{\lambda}\right)^{2n} \right) \sin\phi \\
+    \approx& \cos\phi \left(\frac{2\pi \mathtt{T}}{\lambda}\right) + \sin\phi ~,
+  \end{split}
+\end{equation}
+and the change in the last element of the vector is
+\begin{equation}
+  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{V \cos\phi \left(\frac{2\pi \mathtt{T}}{\lambda}\right) + \sin\phi}{p_0 c} = \frac{V \cos\phi \left(\frac{2\pi }{\lambda}\right)}{p_0 c} \mathtt{T} + \frac{\sin\phi}{p_0c} \equiv \mathbb{R}_{6,5} \mathtt{T} + \mathbb{V}_6 ~.
+\end{equation}
+In general, this is an affine transform; however if $\phi = n\pi$ for some integer $n$ it reduces to a simple linear transform. Currently, the implementation assumes that $\phi = 0$.
+
+This implementation returns a non-identity matrix when called by the \texttt{getMatrix}() method.
+
+
+
 
 \subsection{CrabCavity}
 \subsection{PrintMean}
