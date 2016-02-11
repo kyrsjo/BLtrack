@@ -9,3 +9,6 @@ def prettyPrint66(M):
         ret += "\n"
     return ret
     
+#Constants
+c = 299792458.0    #Speed of light [m/s]
+e = 1.60217662e-19 #Electron charge [C]
