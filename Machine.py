@@ -36,7 +36,11 @@ class Ring:
                     self.elements.append(RFCavity_Matrix(float(l[0]),float(l[1]),float(l[2]),float(l[3]),float(l[4])))
                 else:
                     print "ERROR in Ring::__init__(initStr)::RFCAV_MATRIX while parsing line '"+line+"'"
-
+            elif lsp[0]=="RFCAV_LOADING":
+                l=lsp[1:]
+                assert len(l) == 4, \
+                    "ERROR in Ring::__init__(initStr)::RFCAV_LOADING while parsing line '"+line+"'"
+                self.elements.append(RFCavity_loading(float(l[0]),float(l[1]),float(l[2]),float(l[3])))
                 
             elif lsp[0]=="PRINTMEAN":
                 if len(lsp) == 1:
@@ -156,7 +160,36 @@ class RFCavity_Matrix(Element):
         return np.dot(self.RE,bunch.particles)
     def getMatrix(self):
         return self.RE
+    def __str__(self):
+        ret = "RFCavity_Matrix:\n"
+        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], E0 = %10g[GeV], m0 = %10g[MeV/c^2]\n\n" % (self.voltage,self.wavelength,self.phase, self.E0/1e9, self.m0/1e6)
+        ret += util.prettyPrint66(self.RE)
+        return ret
 
+class RFCavity_loading(Element):
+    voltage    = None # [V]
+    wavelength = None # [m]
+    phase      = None # [rad]
+    RQ         = None
+    
+    #self.omegaC = None # [radians/second]
+    
+    def __init__(self,voltage,wavelength,phase,RQ):
+        self.voltage    = voltage
+        self.wavelength = wavelength
+        self.phase      = phase
+        self.RQ         = RQ
+        
+    def track(self,bunch,turn):
+        voltage = - self.RQ * 2*np.pi*299792458/self.wavelength * 1.60217662e-19*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength)
+        #print np.absolute(voltage), np.angle(voltage)*180/np.pi
+        
+        bunch.particles[5,:] += self.voltage*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
+        return bunch.particles
+    def __str__(self):
+        ret = "RFCavity_loading:\n"
+        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g\n\n" % (self.voltage,self.wavelength,self.phase,self.RQ)
+        return ret
 
 class CrabCavity(Element):
     voltage    = None # Transverse voltage Vcc [V]
