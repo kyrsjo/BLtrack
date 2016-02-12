@@ -62,11 +62,11 @@ The coordinates and their units are the same as in MadX (CITE MadX manual):
 \item[PX] Fractional transverse momentum in the horizontal direction $p_x/p_0$.
 \item[Y]  Position in the horizontal direction [m].
 \item[PY] Fractional transverse momentum in the vertical direction $p_y/p_0$.
-\item[T]  Position relative to a reference particle, i.e.\ $\mathrm{T}=-c t$ [m]. Thus a positive T implies that the particle arrives ahead of the reference particle ($t=0$).
+\item[T]  Position relative to a reference particle, i.e.\ $\mathtt{T}=-c t$ [m]. Thus a positive \texttt{T} implies that the particle arrives ahead of the reference particle ($t=0$).
 \item[PT] Normalized energy error $\Delta E/(p_s c)$.
 \end{description}
 Here $p_0$ is the design momentum of the machine, and $p_s$ the reference momentum.
-They are related through the variable $\mathrm{DELTAP} = (p_s-p_0)/p_0$, which is assumed to be 0 $\Rightarrow p_s=p_0$.
+They are related through the variable $\mathtt{DELTAP} = (p_s-p_0)/p_0$, which is assumed to be 0, which implies that $p_s = p_0$.
 
 The \texttt{Beam} oject holds one or more \texttt{Bunch} objects, which again holds the actual particles to be tracked. Further, it reads the beams total (design) energy $\mathtt{E0}$ [eV] from the input file, and uses it to compute the following related variables:
 \begin{equation}
@@ -101,14 +101,18 @@ The matrix can be extracted from MadX as a one turn map or as a sectormap (see s
 TODO: Input
 
 \subsection{RFcavity}
+\label{sec:elements:RFcavity}
 
 This element implements an accelerating RF cavity.
-The necessary input is the voltage $V$ [Volts], wavelength $\lambda$ [m], and phase $\phi$ [radians].
-The applied kick is then
+The necessary input is the voltage $V_0$ [Volts], wavelength $\lambda$ [m], and phase $\phi$ [radians], and the voltage seen by the particle is
 \begin{equation}
-  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{V \sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right)}{p_0 c}~,
+  V(t) = V_0 \sin\left( -\omega_c t + \phi \right)~.
 \end{equation}
-where it is assumed that $p_s = p_0$ and that the particle charge is $e$.
+Since $ -\omega_c t = 2\pi T / \lambda$, the applied kick is 
+\begin{equation}
+  \Delta \left(\frac{\Delta E}{p_s c}\right) = \frac{V_0 \sin\left(\frac{2\pi \mathtt{T} }{\lambda}+\phi\right)}{p_0 c}~.
+\end{equation}
+Here it is assumed that $p_s = p_0$ and that the particle charge is $e$.
 The design momentum is taken from the beam object, where it is calculated as described in Equation~\eqref{eq:designmomentum}.
 
 
@@ -134,14 +138,57 @@ and the change in the last element of the vector is
 \end{equation}
 In general, this is an affine transform; however if $\phi = n\pi$ for some integer $n$ it reduces to a simple linear transform. Currently, the implementation assumes that $\phi = 0$.
 
-This implementation returns a non-identity matrix when called by the \texttt{getMatrix}() method.
+This implementation returns a non-identity matrix when called by the \texttt{get\-Matrix}() method.
 
+TODO: Input
 
+\subsection{RFcavity\_loading}
 
+This implements an accelerating RF cavity in the same way as described in Section~\ref{sec:elements:RFcavity}, however it also adds the effect of beam loading.
+For a bunch that is much shorter than the RF wavelength, the amplitude of the beam induced voltage is (CITE the handbook, 2nd ed, section 2.4.3)
+\begin{equation}
+  V_{b0} = (R/Q) \omega_c q~,
+  \label{eq:elements:RFcavityLoading:Vb0}
+\end{equation}
+where $\omega_c$ is the cavity resonant frequency, $q$ the bunch charge, and $R/Q$ the geometric factor of the cavity.
+This voltage is deposited with a decelerating phase, such that a particle following immediatly after sees a voltage $-V_{b0}$.
+Further, the decelerating voltage seen by each single bunch is $V_{b0}/2$, as shown by the fundamental theorem of beam loading.
+
+Since the bunches we want to treat are not neccessarily short, Equation~\eqref{eq:elements:RFcavityLoading:Vb0} cannot be used directly.
+It can however be used on a thin slice of the bunch, or for a single tracked particle.
+The charge per tracked particle is then simply the beam charge divided by the number of particles in the bunch.
+
+If the complex voltage (which is tracking both time and amplitude) at $t=0$ is $\tilde V_b(0)$, it hashas after a time $t$ developed as
+\begin{equation}
+  \tilde V_b(t) =  V_{b0} ~ e^{\mathbf{i}\pi} ~ \exp\left(-\mathrm{i}\omega_ct - \frac{t \omega_c}{2Q_L} \right)~.
+  \label{eq:elements:RFcavityLoading:VbProp}
+\end{equation}
+Here, $Q_L = \omega_c U / P_\mathrm{loss}$ is the loaded Q-factor of the cavity, which gives the decay time $\tau_U = \frac{U}{\omega}$ of the energy $U$ contained in the cavitiy's field.
+For a superconducting RF cavity, the radiation through the cavity coupler dominates the power loss, which therefore is the most important factor determining $Q_L$.
+To get the actual voltage $V_b(t)$ that seen by the beam, it is neccessary to take the real part, i.e.\ $V_b(t) = \mathrm{Re}\left(\tilde V_b(t) \right)$.
+
+Substituting $-\omega_c t = 2\pi \mathtt{T} / \lambda$, the voltage seen by each particle is thus given as
+\begin{equation}
+  V = V_g(\mathtt{T}) - V_{b0}/2 + \mathrm{Re}\left( \tilde V_b(\mathtt{T}=0) \exp\left(\frac{+\mathrm{i}~2\pi \mathtt{T}}{\lambda} + \frac{\pi \mathtt{T}}{\lambda Q_L} \right) \right)~.
+\end{equation}
+Here $\tilde V_b(\mathtt{T}=0)$ is the complex beam voltage at the center of the bunch, propagated from the previous bunch using Equation~\eqref{eq:elements:RFcavityLoading:VbProp} with $t=cL$ where $L$ is the distance between the bunches.
+In the case of a single bunch, $L$ is the circumference of the machine.
+
+After the treatment of each particle, the beam voltage $\tilde V_b$ is updated as
+\begin{equation}
+  \tilde V_b(T=0) - V_{b0} \exp \left( \frac{- \mathbf{i} ~ 2\pi \mathtt{T}}{\lambda}  \right)
+\end{equation}
+where the exponential propagates the induced voltage forward or backward in time to the ``centered'' time corresponding to $\mathtt{T}=0$.
+Please note that the decay $Q_L$ is considered to be negliglible during the length of the bunch.
+
+Due to causality, it is neccessary that the particles are treated in the order they arrive in the cavity, i.e.\ they must be reversed-sorted by \texttt{T}.
+Furthermore, the value of $\omega_c$ should be carefully matched to the length of the machine and the harmonic number, otherwise the propagation of the voltage around one turn using \label{eq:elements:RFcavityLoading:VbProp} will give a phase offset every turn.
 
 \subsection{CrabCavity}
 \subsection{PrintMean}
 \subsection{PrintBunch}
+
+\chapter{Output and analysis tools}
 
 \appendix
 \chapter{Creating a machine definition from MadX}
