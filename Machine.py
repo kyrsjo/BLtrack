@@ -174,9 +174,10 @@ class RFCavity_Matrix(Element):
         return ret
 
 class RFCavity_loading(Element):
-    voltage    = None # [V]
+    Vg         = None # Generator voltage [V]
+    phase      = None # Generator phase   [rad]
+    
     wavelength = None # [m]
-    phase      = None # [rad]
     RQ         = None
     QL         = None
     
@@ -186,8 +187,8 @@ class RFCavity_loading(Element):
     
     of = None
 
-    def __init__(self,voltage,wavelength,phase,RQ,QL):
-        self.voltage    = voltage
+    def __init__(self,Vg,wavelength,phase,RQ,QL):
+        self.Vg         = Vg
         self.wavelength = wavelength
         self.phase      = phase
         self.RQ         = RQ
@@ -201,19 +202,19 @@ class RFCavity_loading(Element):
         L = self.ring.length # Distance from previous bunch [m]
         assert type(L) == float, "ring length should be a float, is it defined?"
         
-        #print turn, np.exp(-(L/util.c)/(2.*self.QL))
         self.Vb *= np.exp(1j*2*np.pi*L/self.wavelength)*np.exp(-(L/util.c)/(2.*self.QL))
-        #print np.absolute(self.Vb), np.angle(self.Vb)*180/np.pi,
-        self.Vb -= self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength)
-        #print np.absolute(self.Vb), np.angle(self.Vb)*180/np.pi
         
+        bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0  # Generator voltage
+        bunch.particles[5,:] += np.real(self.Vb*np.exp(-1j*2*np.pi * bunch.particles[4,:] / self.wavelength )) / bunch.beam.p0 # Beam voltage
+        
+        #Update beam voltage 
+        self.Vb -= np.sum(self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength))
         self.of.write(str(turn) + " %10g %10g %10g %10g \n" %(np.real(self.Vb),np.imag(self.Vb), np.absolute(self.Vb),np.angle(self.Vb)) )
-        
-        bunch.particles[5,:] += self.voltage*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
+            
         return bunch.particles
     def __str__(self):
         ret = "RFCavity_loading:\n"
-        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g \n\n" % (self.voltage,self.wavelength,self.phase,self.RQ,self.QL)
+        ret += " Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g \n\n" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL)
         return ret
 
 class CrabCavity(Element):
