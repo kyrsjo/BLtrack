@@ -4,7 +4,7 @@
 
 \usepackage{hyperref}
 \usepackage{algorithmic}
-%\usepackage{todonotes}
+\usepackage{todonotes}
 \usepackage{amsmath}
 \usepackage{amsfonts}
 
@@ -81,9 +81,9 @@ The \texttt{Beam} oject holds one or more \texttt{Bunch} objects, which again ho
 \end{equation}
 Here the variable m0 [eV/c\textsuperscript{2}] is the beam particle's rest mass, which by default is equal to the proton mass at 938.272 MeV/c\textsuperscript{2}.
 
-TODO: Multiple particles / storage of particle array, coupling to SectorMapMatrix (matrix orientation) \ldots
+\todo[inline]{Multiple particles / storage of particle array, coupling to SectorMapMatrix (matrix orientation) \ldots}
 
-TODO: Input file reading.
+\todo[inline]{Input file reading}
 
 \chapter{Machine description}
 \label{sec:machine}
@@ -98,7 +98,7 @@ All elements inherit from the same \texttt{Element} class, and must inplement a 
 This element describes a part of the machine as a $6 \times 6$ matrix $\mathbf{R}$, which when multiplied with the particle vector describe the linear effect of a part of the lattice.
 The matrix can be extracted from MadX as a one turn map or as a sectormap (see section~\ref{sec:MadX})
 
-TODO: Input
+\todo[inline]{Input file reading}
 
 \subsection{RFcavity}
 \label{sec:elements:RFcavity}
@@ -116,7 +116,7 @@ Here it is assumed that $p_s = p_0$ and that the particle charge is $e$.
 The design momentum is taken from the beam object, where it is calculated as described in Equation~\eqref{eq:designmomentum}.
 
 
-TODO: Input
+\todo[inline]{Input file reading}
 
 \subsection{RFcavity\_Matrix}
 
@@ -140,12 +140,12 @@ In general, this is an affine transform; however if $\phi = n\pi$ for some integ
 
 This implementation returns a non-identity matrix when called by the \texttt{get\-Matrix}() method.
 
-TODO: Input
+\todo[inline]{Input file reading}
 
 \subsection{RFcavity\_loading}
 
 This implements an accelerating RF cavity in the same way as described in Section~\ref{sec:elements:RFcavity}, however it also adds the effect of beam loading.
-For a bunch that is much shorter than the RF wavelength, the amplitude of the beam induced voltage is (CITE the handbook, 2nd ed, section 2.4.3)
+For a bunch that is much shorter than the RF wavelength, the amplitude of the beam induced voltage is \todo{CITE the handbook, 2nd ed, section 2.4.3}
 \begin{equation}
   V_{b0} = (R/Q) \omega_c q~,
   \label{eq:elements:RFcavityLoading:Vb0}
@@ -183,6 +183,10 @@ Please note that the decay $Q_L$ is considered to be negliglible during the leng
 
 Due to causality, it is neccessary that the particles are treated in the order they arrive in the cavity, i.e.\ they must be reversed-sorted by \texttt{T}.
 Furthermore, the value of $\omega_c$ should be carefully matched to the length of the machine and the harmonic number, otherwise the propagation of the voltage around one turn using \label{eq:elements:RFcavityLoading:VbProp} will give a phase offset every turn.
+
+\todo[inline]{Parameters, output files, regulation of Vg,...}
+
+\todo[inline]{Input file reading}
 
 \subsection{CrabCavity}
 \subsection{PrintMean}
