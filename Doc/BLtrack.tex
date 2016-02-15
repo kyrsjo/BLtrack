@@ -158,7 +158,7 @@ Since the bunches we want to treat are not neccessarily short, Equation~\eqref{e
 It can however be used on a thin slice of the bunch, or for a single tracked particle.
 The charge per tracked particle is then simply the beam charge divided by the number of particles in the bunch.
 
-If the complex voltage (which is tracking both time and amplitude) at $t=0$ is $\tilde V_b(0)$, it hashas after a time $t$ developed as
+If the complex voltage (which is tracking both time and amplitude) at $t=0$ is $\tilde V_b(0)$, after a time $t$ has developed as
 \begin{equation}
   \tilde V_b(t) =  V_{b0} ~ e^{\mathbf{i}\pi} ~ \exp\left(-\mathrm{i}\omega_ct - \frac{t \omega_c}{2Q_L} \right)~.
   \label{eq:elements:RFcavityLoading:VbProp}
@@ -169,20 +169,23 @@ To get the actual voltage $V_b(t)$ that seen by the beam, it is neccessary to ta
 
 Substituting $-\omega_c t = 2\pi \mathtt{T} / \lambda$, the voltage seen by each particle is thus given as
 \begin{equation}
-  V = V_g(\mathtt{T}) - V_{b0}/2 + \mathrm{Re}\left( \tilde V_b(\mathtt{T}=0) \exp\left(\frac{+\mathrm{i}~2\pi \mathtt{T}}{\lambda} + \frac{\pi \mathtt{T}}{\lambda Q_L} \right) \right)~.
+  V = V_g(\mathtt{T}) - V_{b0}/2 + \mathrm{Re}\left( \tilde V_b(\mathtt{T}=0) \exp\left(\frac{+\mathbf{i}~2\pi \mathtt{T}}{\lambda} + \frac{\pi \mathtt{T}}{\lambda Q_L} \right) \right)~.
 \end{equation}
-Here $\tilde V_b(\mathtt{T}=0)$ is the complex beam voltage at the center of the bunch, propagated from the previous bunch using Equation~\eqref{eq:elements:RFcavityLoading:VbProp} with $t=cL$ where $L$ is the distance between the bunches.
+Here $\tilde V_b(\mathtt{T}=0)$ is the complex beam voltage at the center of the bunch, propagated from the previous bunch using Equation~\eqref{eq:elements:RFcavityLoading:VbProp} with $t=cL$ where $L$ is the distance between the bunches, i.e.\
+\begin{equation}
+  \tilde V_b(L;T=0) \leftarrow  \tilde V_{b}(0;T=0) \exp\left(-\frac{\mathbf{i} 2\pi L}{\lambda} - \frac{\pi L }{\lambda Q_L} \right)~.
+\end{equation}
 In the case of a single bunch, $L$ is the circumference of the machine.
 
 After the treatment of each particle, the beam voltage $\tilde V_b$ is updated as
 \begin{equation}
-  \tilde V_b(T=0) - V_{b0} \exp \left( \frac{- \mathbf{i} ~ 2\pi \mathtt{T}}{\lambda}  \right)
+  \tilde V_b(T=0) \leftarrow \tilde V_b(T=0) - V_{b0} \exp \left( \frac{- \mathbf{i} ~ 2\pi \mathtt{T}}{\lambda}  \right) 
 \end{equation}
 where the exponential propagates the induced voltage forward or backward in time to the ``centered'' time corresponding to $\mathtt{T}=0$.
 Please note that the decay $Q_L$ is considered to be negliglible during the length of the bunch.
 
 Due to causality, it is neccessary that the particles are treated in the order they arrive in the cavity, i.e.\ they must be reversed-sorted by \texttt{T}.
-Furthermore, the value of $\omega_c$ should be carefully matched to the length of the machine and the harmonic number, otherwise the propagation of the voltage around one turn using \label{eq:elements:RFcavityLoading:VbProp} will give a phase offset every turn.
+Furthermore, the value of $\omega_c$ should be carefully matched to the length of the machine and the harmonic number, otherwise the propagation of the voltage around one turn using Equation~\eqref{eq:elements:RFcavityLoading:VbProp} will give a phase offset every turn.
 
 \todo[inline]{Parameters, output files, regulation of Vg,...}
 
