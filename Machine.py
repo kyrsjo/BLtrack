@@ -199,16 +199,25 @@ class RFCavity_loading(Element):
         self.of = open("cavFile.dat",'w')
         
     def track(self,bunch,turn):
+        
+        #Calculate the current beam loading voltage at T=0:
         L = self.ring.length # Distance from previous bunch [m]
         assert type(L) == float, "ring length should be a float, is it defined?"
+        self.Vb *= np.exp(-1j*2*np.pi*L/self.wavelength)*np.exp(- np.pi * L /(self.QL*self.wavelength))
+        #Beam loading voltage for a single particle
+        Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N # TODO: Bunch charge hard-coded to 10^11...
+
+        #Sort the particles and iterate:
+        tKey = np.argsort(bunch.particles[4,:])
+        for pind in tKey[::-1]: #Loop from (largest T -> smallest) to (smallest T -> largest t):
+            bunch.particles[5,pind] += (self.Vg - Vb0/2.0 + np.real(self.Vb*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)) )/bunch.beam.p0
+            self.Vb -=  Vb0*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)
         
-        self.Vb *= np.exp(1j*2*np.pi*L/self.wavelength)*np.exp(-(L/util.c)/(2.*self.QL))
-        
-        bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0  # Generator voltage
-        bunch.particles[5,:] += np.real(self.Vb*np.exp(-1j*2*np.pi * bunch.particles[4,:] / self.wavelength )) / bunch.beam.p0 # Beam voltage
-        
+        #bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0  # Generator voltage
+        #bunch.particles[5,:] += np.real(self.Vb*np.exp(-1j*2*np.pi * bunch.particles[4,:] / self.wavelength )) / bunch.beam.p0 # Beam voltage
         #Update beam voltage 
-        self.Vb -= np.sum(self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength))
+        #self.Vb -= np.sum(self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength))
+        
         self.of.write(str(turn) + " %10g %10g %10g %10g \n" %(np.real(self.Vb),np.imag(self.Vb), np.absolute(self.Vb),np.angle(self.Vb)) )
             
         return bunch.particles
