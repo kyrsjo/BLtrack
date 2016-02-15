@@ -1,4 +1,5 @@
 import numpy as np
+from time import time,ctime
 
 import util
 
@@ -69,9 +70,19 @@ class Ring:
                 print "Error in Ring::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
     def track(self,beam,turns):
+        t0 = time()
         for i in xrange(turns):
             if (i+1)%1000 == 0 or (i+1)==turns:
-                print "turn %15i /%15i (%5.1f %% )" %(i+1,turns,float(i+1)/float(turns)*100)
+                t1 = time()
+                tT = (t1-t0)/1000.0
+                t0 = t1
+                ETA = tT*(turns-i)
+                ETAh = int(ETA/3600.0)
+                ETAm = int((ETA-ETAh)/60.0)
+                ETAs = ETA-ETAh*3600-ETAm*60.0
+                print "turn %10i /%10i (%5.1f %% )" %(i+1,turns,float(i+1)/float(turns)*100), ";",
+                print "Time/turn=%9.5f, remaining=%4i:%2i:%2i"% (tT, ETAh,ETAm,int(ETAs)), ";",
+                print "ETA=", ctime(time()+ETA)
             for element in self.elements:
                 for bunch in beam.bunches:
                     bunch.particles=element.track(bunch,i)
@@ -207,7 +218,7 @@ class RFCavity_loading(Element):
         #Beam loading voltage for a single particle
         Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N # TODO: Bunch charge hard-coded to 10^11...
 
-        #Sort the particles and iterate:
+        #Sort the particles and iterate (this kills the performance in Python :( ):
         tKey = np.argsort(bunch.particles[4,:])
         for pind in tKey[::-1]: #Loop from (largest T -> smallest) to (smallest T -> largest t):
             bunch.particles[5,pind] += (self.Vg - Vb0/2.0 + np.real(self.Vb*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)) )/bunch.beam.p0
