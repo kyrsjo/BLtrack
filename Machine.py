@@ -104,7 +104,7 @@ class Ring:
     def __str__(self):
         ret = ""
         for element in self.elements:
-            ret += str(element) + "\n"
+            ret += str(element) + "\n\n"
         return ret
     
     def getNumElements(self):
@@ -154,8 +154,8 @@ class RFCavity(Element):
     def track(self,bunch,turn):
         bunch.particles[5,:] += self.voltage*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
     def __str__(self):
-        ret = "RFCavity:\n"
-        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
+        ret = "RFCavity: "
+        ret += "voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]" % (self.voltage,self.wavelength,self.phase)
         return ret
 
 class RFCavity_Matrix(Element):
@@ -186,8 +186,8 @@ class RFCavity_Matrix(Element):
     def getMatrix(self):
         return self.RE
     def __str__(self):
-        ret = "RFCavity_Matrix:\n"
-        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], E0 = %10g[GeV], m0 = %10g[MeV/c^2]\n\n" % (self.voltage,self.wavelength,self.phase, self.E0/1e9, self.m0/1e6)
+        ret = "RFCavity_Matrix: "
+        ret += "voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], E0 = %10g[GeV], m0 = %10g[MeV/c^2]" % (self.voltage,self.wavelength,self.phase, self.E0/1e9, self.m0/1e6)
         ret += util.prettyPrint66(self.RE)
         return ret
 
@@ -226,7 +226,10 @@ class RFCavity_loading(Element):
             self.fname = None
         if fname!=None:
             self.of = open(fname,'w')
-        
+            self.of.write("# RFCavity_loading output file\n")
+            self.of.write("# " +str(self)+"\n")
+            self.of.write("#\n")
+            self.of.write("#     Turns       |Vb|    ang(Vb)\n")
         self.Vb         = 0j
         
     def track(self,bunch,turn):
@@ -251,11 +254,11 @@ class RFCavity_loading(Element):
             self.Vb -=  np.sum(Vb0*np.exp(-1j*2*np.pi*bunch.particles[4,:]/self.wavelength))
         
         if self.of:
-            self.of.write(str(turn) + " %10g %10g %10g %10g \n" %(np.real(self.Vb),np.imag(self.Vb), np.absolute(self.Vb),np.angle(self.Vb)) )
+            self.of.write(" %10i %10g %10g \n" %(turn, np.absolute(self.Vb), np.angle(self.Vb)) )
         
     def __str__(self):
-        ret = "RFCavity_loading:\n"
-        ret += " Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g, mode='%s' \n\n" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL,self.mode)
+        ret = "RFCavity_loading: "
+        ret += "Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g, mode='%s'" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL,self.mode)
         return ret
 
 class CrabCavity(Element):
@@ -293,7 +296,7 @@ class CrabCavity(Element):
                                 / np.sqrt(bunch.E0**2-bunch.m0**2)
         
     def __str__(self):
-        ret = "CrabCavity:\n\n"
+        ret = "CrabCavity: "
 #        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
         return ret
         
@@ -313,8 +316,8 @@ class PrintMean(Element):
             print bunch.getMeans()
         
     def __str__(self):
-        ret = "PrintMean:\n"
-        ret += "fname= '"+str(self.fname)+"'\n\n"
+        ret = "PrintMean: "
+        ret += "fname= '"+str(self.fname)
         return ret
 
 class PrintBunch(Element):
@@ -334,6 +337,6 @@ class PrintBunch(Element):
                 print outstring
         
     def __str__(self):
-        ret = "PrintBunch:\n"
-        ret += "fname= '"+str(self.fname)+"'\n\n"
+        ret = "PrintBunch: "
+        ret += "fname= '"+str(self.fname)
         return ret
