@@ -95,6 +95,10 @@ class Ring:
                 for bunch in beam.bunches:
                     element.track(bunch,i)
 
+        print "Tracking finished; now postProcessing:"
+        for element in self.elements:
+            element.postProcess()
+
     def getTotalMatrix(self):
         ret = np.eye(6)
         for element in self.elements:
@@ -121,6 +125,9 @@ class Element:
         return np.eye(6)
     def __str__(self):
         return "ELEMENT WITHOUT __STR__"
+    def postProcess(self):
+        "Optional postprocessing"
+        pass
 
 class SectorMapMatrix(Element):
     RE = None #Matrix for tracking (sector- or one-turn-map, as it comes out of MadX)
@@ -260,6 +267,9 @@ class RFCavity_loading(Element):
         ret = "RFCavity_loading: "
         ret += "Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g, mode='%s'" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL,self.mode)
         return ret
+    def postProcess(self):
+        if self.of:
+            self.of.close()
 
 class CrabCavity(Element):
     voltage    = None # Transverse voltage Vcc [V]
@@ -303,22 +313,38 @@ class CrabCavity(Element):
 class PrintMean(Element):
     fname=None
     ofile=None
+
+    totalMean = None
+    nTurns    = None
+    
     def __init__(self,fname):
         if fname:
             self.fname=fname
             self.ofile=open(fname,'w')
+        self.totalMean = np.zeros(6)
+        self.nTurns = 0
     def track(self,bunch,turn):
+        means = bunch.getMeans()
         if self.ofile:
             self.ofile.write("%i " % (turn,))
-            self.ofile.write("%g %g %g %g %g %g\n" % tuple(bunch.getMeans()))
+            self.ofile.write("%g %g %g %g %g %g\n" % tuple(means))
         else:
             print turn,
-            print bunch.getMeans()
+            print means
+        
+        self.totalMean += means
+        self.nTurns += 1
         
     def __str__(self):
         ret = "PrintMean: "
         ret += "fname= '"+str(self.fname)
         return ret
+
+    def postProcess(self):
+        if self.ofile:
+            self.ofile.close()
+        self.totalMean /= float(self.nTurns)
+        print "Orbit estimate from PrintMean: %g %g %g %g %g %g" % tuple(self.totalMean)
 
 class PrintBunch(Element):
     fname=None
@@ -340,3 +366,7 @@ class PrintBunch(Element):
         ret = "PrintBunch: "
         ret += "fname= '"+str(self.fname)
         return ret
+
+    def postProcess(self):
+        if self.ofile:
+            self.ofile.close()
