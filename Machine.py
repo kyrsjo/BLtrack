@@ -42,9 +42,17 @@ class Ring:
                 self.elements[-1].ring=self
             elif lsp[0]=="RFCAV_LOADING":
                 l=lsp[1:]
-                assert len(l) == 5, \
+                assert len(l) == 7, \
                     "ERROR in Ring::__init__(initStr)::RFCAV_LOADING while parsing line '"+line+"'"
-                self.elements.append(RFCavity_loading(float(l[0]),float(l[1]),float(l[2]),float(l[3]),float(l[4])))
+                Vg         = float(l[0])
+                wavelength = float(l[1])
+                phase      = float(l[2])
+                RQ         = float(l[3])
+                QL         = float(l[4])
+                mode       = l[5]
+                fname      = l[6]
+                
+                self.elements.append(RFCavity_loading(Vg,wavelength,phase,RQ,QL,mode,fname))
                 self.elements[-1].ring=self
             elif lsp[0]=="PRINTMEAN":
                 if len(lsp) == 1:
@@ -81,7 +89,7 @@ class Ring:
                 ETAm = int((ETA-ETAh)/60.0)
                 ETAs = ETA-ETAh*3600-ETAm*60.0
                 print "turn %10i /%10i (%5.1f %% )" %(i+1,turns,float(i+1)/float(turns)*100), ";",
-                print "Time/turn=%9.5f, remaining=%4i:%2i:%2i"% (tT, ETAh,ETAm,int(ETAs)), ";",
+                print "Time/turn=%9.5f, remaining=%4i:%02i:%02i"% (tT, ETAh,ETAm,int(ETAs)), ";",
                 print "ETA=", ctime(time()+ETA)
             for element in self.elements:
                 for bunch in beam.bunches:
@@ -191,48 +199,63 @@ class RFCavity_loading(Element):
     RQ         = None
     QL         = None
     
+    mode       = None
+    
     Vb         = None #Beam loading voltage from the previous bunch (complex)
     
-    #self.omegaC = None # [radians/second]
-    
-    of = None
+    fname      = None
+    of         = None #Output file pointer (optional)
 
-    def __init__(self,Vg,wavelength,phase,RQ,QL):
+    def __init__(self,Vg,wavelength,phase,RQ,QL,mode,fname=None):
         self.Vg         = Vg
         self.wavelength = wavelength
         self.phase      = phase
         self.RQ         = RQ
         self.QL         = QL
-
+        
+        self.mode       = mode
+        # Accepted modes:
+        # - 'simple':
+        #   Keep Vg steady, apply Vb on top
+        # - 'noload1':
+        #   The beam loading has no effect on the beam (but it is still calculated)
+        #
+        assert self.mode=='simple' or self.mode=='noload1', "got mode='"+str(mode)+"'"
+        
+        if fname=="nofile":
+            self.fname = None
+        if fname!=None:
+            self.of = open(fname,'w')
+        
         self.Vb         = 0j
         
-        self.of = open("cavFile.dat",'w')
-        
     def track(self,bunch,turn):
-        
         #Calculate the current beam loading voltage at T=0:
         L = self.ring.length # Distance from previous bunch [m]
         assert type(L) == float, "ring length should be a float, is it defined?"
         self.Vb *= np.exp(-1j*2*np.pi*L/self.wavelength)*np.exp(- np.pi * L /(self.QL*self.wavelength))
         #Beam loading voltage for a single particle
         Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N # TODO: Bunch charge hard-coded to 10^11...
-
-        #Sort the particles and iterate (this kills the performance in Python :( ):
-        tKey = np.argsort(bunch.particles[4,:])
-        for pind in tKey[::-1]: #Loop from (largest T -> smallest) to (smallest T -> largest t):
-            bunch.particles[5,pind] += (self.Vg - Vb0/2.0 + np.real(self.Vb*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)) )/bunch.beam.p0
-            self.Vb -=  Vb0*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)
         
-        #bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0  # Generator voltage
-        #bunch.particles[5,:] += np.real(self.Vb*np.exp(-1j*2*np.pi * bunch.particles[4,:] / self.wavelength )) / bunch.beam.p0 # Beam voltage
-        #Update beam voltage 
-        #self.Vb -= np.sum(self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N * np.exp(1j*bunch.particles[4,:]*2*np.pi/self.wavelength))
+        if self.mode == 'simple':
+            #Sort the particles and iterate (this kills the performance in Python :( ):
+            tKey = np.argsort(bunch.particles[4,:])
+            for pind in tKey[::-1]: #Loop from (largest T -> smallest) to (smallest T -> largest t):
+                bunch.particles[5,pind] += (  self.Vg*np.sin(2*np.pi * bunch.particles[4,pind] / self.wavelength + self.phase)
+                                              - Vb0/2.0 
+                                              + np.real(self.Vb*np.exp(1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)) 
+                                           ) / bunch.beam.p0
+                self.Vb -=  Vb0*np.exp(-1j*2*np.pi*bunch.particles[4,pind]/self.wavelength)
+        elif self.mode == 'noload1':
+            bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
+            self.Vb -=  np.sum(Vb0*np.exp(-1j*2*np.pi*bunch.particles[4,:]/self.wavelength))
         
-        self.of.write(str(turn) + " %10g %10g %10g %10g \n" %(np.real(self.Vb),np.imag(self.Vb), np.absolute(self.Vb),np.angle(self.Vb)) )
+        if self.of:
+            self.of.write(str(turn) + " %10g %10g %10g %10g \n" %(np.real(self.Vb),np.imag(self.Vb), np.absolute(self.Vb),np.angle(self.Vb)) )
         
     def __str__(self):
         ret = "RFCavity_loading:\n"
-        ret += " Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g \n\n" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL)
+        ret += " Generator voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad], R/Q = %10g, QL = %10g, mode='%s' \n\n" % (self.Vg,self.wavelength,self.phase,self.RQ,self.QL,self.mode)
         return ret
 
 class CrabCavity(Element):
