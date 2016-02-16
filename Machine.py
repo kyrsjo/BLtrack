@@ -73,7 +73,10 @@ class Ring:
                     exit(1)
                 self.elements[-1].ring=self
             elif lsp[0]=="PLOT_DISTRIBUTION":
-                self.elements.append(PlotDistribution("x","xp"))
+                if len(lsp)!=3:
+                    print "Error in Ring::__init__(initStr)::PLOT_DISTRIBUTION while parsing line '"+line+"'"
+                    exit(1)
+                self.elements.append(PlotDistribution(lsp[1],lsp[2]))
             elif lsp[0]=="RINGLENGTH":
                 self.length = float(lsp[1])
             else:
@@ -377,13 +380,19 @@ import pygame
 class PyGameManager:
     theManager = None
     @staticmethod
-    def getManager():
+    def getManager(newPlot):
         if not PyGameManager.theManager:
             PyGameManager.theManager=PyGameManager()
+        PyGameManager.theManager.addPlot(newPlot)
         return PyGameManager.theManager
+    
+    plots = None
     
     def __init__(self):
         pygame.init()
+        self.plots=[]
+    def addPlot(self,plot):
+        self.plots.append(plot)
     def __del__(self):
         pygame.quit()
 
@@ -415,7 +424,7 @@ class PlotDistribution(Element):
     yScale = None
 
     def __init__(self, v1,v2):
-        self.manager = PyGameManager.getManager()
+        self.manager = PyGameManager.getManager(self)
         self.window = pygame.display.set_mode((800,800))
         pygame.display.set_caption("PlotDistribution: v1="+str(v1)+" vs. v2="+str(v2))
         print self.window.get_size()
@@ -427,7 +436,14 @@ class PlotDistribution(Element):
         self.font2    = pygame.font.Font(None,20)
         self.v1_label = self.font.render(v1, 1,(10,10,10))
         self.v2_label = self.font.render(v2, 1,(10,10,10))
-        
+
+        cases = {"x":0,"xp":1,"y":2,"yp":3,"t":4,"pt":5}
+        assert v1!=v2
+        self.v1=v1
+        self.v1_idx=cases[v1]
+        self.v2=v2
+        self.v2_idx=cases[v2]
+
     def track(self,bunch,turn):
 
         self.background.fill((250, 250, 250)) #CLS
@@ -437,23 +453,23 @@ class PlotDistribution(Element):
         self.background.blit(text,textpos)
         
         updateX=False
-        xmin = bunch.particles[0,:].min()
+        xmin = bunch.particles[self.v1_idx,:].min()
         if xmin < self.xmin or self.xmin==None:
             self.xmin = xmin
             updateX = True
             self.xScale = 300/max(-self.xmin,self.xmax)
-        xmax = bunch.particles[0,:].max()
+        xmax = bunch.particles[self.v1_idx,:].max()
         if xmax > self.xmax or self.xmax==None:
             self.xmax = xmax
             updateX = True
             self.xScale = 300/max(-self.xmin,self.xmax)
         updateY=False
-        ymin = bunch.particles[1,:].min()
+        ymin = bunch.particles[self.v2_idx,:].min()
         if ymin < self.ymin or self.ymin==None:
             self.ymin = ymin
             updateY = True
             self.yScale = 300/max(-self.ymin,self.ymax)
-        ymax = bunch.particles[1,:].max()
+        ymax = bunch.particles[self.v2_idx,:].max()
         if ymax > self.ymax or self.xmax==None:
             self.ymax = ymax
             updateY = True
@@ -467,7 +483,7 @@ class PlotDistribution(Element):
             self.v1_ticks.append(self.font2.render(renderString%(-xmaxmin/2.,),1,(10,10,10)))
             self.v1_ticks.append(self.font2.render(renderString%(+xmaxmin/2.,),1,(10,10,10)))
             self.v1_ticks.append(self.font2.render(renderString%(+xmaxmin,),1,(10,10,10)))
-            print "updateX"
+            #print "updateX"
         if updateY:
             #new Y ticks
             self.v2_ticks=[]
@@ -476,7 +492,7 @@ class PlotDistribution(Element):
             self.v2_ticks.append(self.font2.render(renderString%(+ymaxmin/2.,),1,(10,10,10)))
             self.v2_ticks.append(self.font2.render(renderString%(-ymaxmin/2.,),1,(10,10,10)))
             self.v2_ticks.append(self.font2.render(renderString%(-ymaxmin,),1,(10,10,10)))
-            print "updateY"
+            #print "updateY"
         
         #x axis
         pygame.draw.line(self.background, (10,10,10), (50,400), (750,400))   #line
@@ -506,7 +522,7 @@ class PlotDistribution(Element):
             Y = int(400-self.yScale*y)
             return (X,Y)
         
-        for (i,x,y) in zip(xrange(bunch.N),bunch.particles[0,:],bunch.particles[1,:]):
+        for (i,x,y) in zip(xrange(bunch.N),bunch.particles[self.v1_idx,:],bunch.particles[self.v2_idx,:]):
             (X,Y) = getXY(x,y)
             C = np.asarray((255,255,255))*float(i)/bunch.N
             C = map(int,C)
