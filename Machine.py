@@ -73,10 +73,13 @@ class Ring:
                     exit(1)
                 self.elements[-1].ring=self
             elif lsp[0]=="PLOT_DISTRIBUTION":
-                if len(lsp)!=3:
+                if len(lsp)<3 or len(lsp)>4:
                     print "Error in Ring::__init__(initStr)::PLOT_DISTRIBUTION while parsing line '"+line+"'"
                     exit(1)
-                self.elements.append(PlotDistribution(lsp[1],lsp[2]))
+                if len(lsp)==4 and lsp[3]=="STOP":
+                    self.elements.append(PlotDistribution(lsp[1],lsp[2],True))
+                else:
+                    self.elements.append(PlotDistribution(lsp[1],lsp[2]))
             elif lsp[0]=="RINGLENGTH":
                 self.length = float(lsp[1])
             else:
@@ -436,7 +439,9 @@ class PlotDistribution(Element):
     ymin = None
     yScale = None
 
-    def __init__(self, v1,v2):
+    doStop = None
+
+    def __init__(self, v1,v2, doStop = False):
         self.manager = PyGameManager.getManager(self)
         self.token = self.manager.addPlot(self)
 
@@ -456,6 +461,8 @@ class PlotDistribution(Element):
         self.v1_idx=cases[v1]
         self.v2=v2
         self.v2_idx=cases[v2]
+        
+        self.doStop = doStop
 
     def track(self,bunch,turn):
 
@@ -544,4 +551,6 @@ class PlotDistribution(Element):
         #pygame.draw.rect(self.background, (0,0,255), (100,100,600,600),1)
 
         self.manager.doPlot(self.token)
+        if self.doStop:
+            raw_input()
         
