@@ -383,16 +383,27 @@ class PyGameManager:
     def getManager(newPlot):
         if not PyGameManager.theManager:
             PyGameManager.theManager=PyGameManager()
-        PyGameManager.theManager.addPlot(newPlot)
         return PyGameManager.theManager
     
     plots = None
+    window = None
     
     def __init__(self):
         pygame.init()
         self.plots=[]
     def addPlot(self,plot):
         self.plots.append(plot)
+        return len(self.plots)-1
+    def doPlot(self,token):
+        if self.window == None:
+            self.window = pygame.display.set_mode((800*len(self.plots),800))
+            pygame.display.set_caption("Simulation plots!")
+        if not self.plots[token].bkIsConvert:
+            self.plots[token].background = self.plots[token].background.convert()
+            self.plots[token].bkIsConvert=True
+        self.window.blit(self.plots[token].background,(800*token,0))
+        pygame.display.flip()
+        
     def __del__(self):
         pygame.quit()
 
@@ -407,8 +418,10 @@ class PlotDistribution(Element):
     v2_ticks = None
     
     manager = None
-    window  = None
+    token   = None
     background = None
+    bkIsConvert = None
+
     font    = None
     font2   = None
     
@@ -425,11 +438,11 @@ class PlotDistribution(Element):
 
     def __init__(self, v1,v2):
         self.manager = PyGameManager.getManager(self)
-        self.window = pygame.display.set_mode((800,800))
-        pygame.display.set_caption("PlotDistribution: v1="+str(v1)+" vs. v2="+str(v2))
-        print self.window.get_size()
-        self.background = pygame.Surface(self.window.get_size())
-        self.background = self.background.convert()
+        self.token = self.manager.addPlot(self)
+
+        self.background = pygame.Surface((800,800))
+        self.bkIsConvert = False
+        #self.background = self.background.convert()
 	self.background.fill((250, 250, 250))
 
         self.font     = pygame.font.Font(None,36)
@@ -530,6 +543,5 @@ class PlotDistribution(Element):
 
         #pygame.draw.rect(self.background, (0,0,255), (100,100,600,600),1)
 
-        self.window.blit(self.background,(0,0))
-        pygame.display.flip()
+        self.manager.doPlot(self.token)
         
