@@ -72,6 +72,8 @@ class Ring:
                     print "Error in Ring::__init__(initStr)::PRINTBUNCH while parsing line '"+line+"'"
                     exit(1)
                 self.elements[-1].ring=self
+            elif lsp[0]=="PLOT_DISTRIBUTION":
+                self.elements.append(PlotDistribution("x","xp"))
             elif lsp[0]=="RINGLENGTH":
                 self.length = float(lsp[1])
             else:
@@ -370,3 +372,148 @@ class PrintBunch(Element):
     def postProcess(self):
         if self.ofile:
             self.ofile.close()
+
+import pygame
+class PyGameManager:
+    theManager = None
+    @staticmethod
+    def getManager():
+        if not PyGameManager.theManager:
+            PyGameManager.theManager=PyGameManager()
+        return PyGameManager.theManager
+    
+    def __init__(self):
+        pygame.init()
+    def __del__(self):
+        pygame.quit()
+
+class PlotDistribution(Element):
+    v1     = None
+    v1_idx = None
+    v1_label = None
+    v1_ticks = None
+    v2     = None
+    v2_idx = None
+    v2_label = None
+    v2_ticks = None
+    
+    manager = None
+    window  = None
+    background = None
+    font    = None
+    font2   = None
+    
+    xaxis = None
+    xaxis_min = None
+    xaxis_max = None
+    
+    xmax = None
+    xmin = None
+    xScale = None
+    ymax = None
+    ymin = None
+    yScale = None
+
+    def __init__(self, v1,v2):
+        self.manager = PyGameManager.getManager()
+        self.window = pygame.display.set_mode((800,800))
+        pygame.display.set_caption("PlotDistribution: v1="+str(v1)+" vs. v2="+str(v2))
+        print self.window.get_size()
+        self.background = pygame.Surface(self.window.get_size())
+        self.background = self.background.convert()
+	self.background.fill((250, 250, 250))
+
+        self.font     = pygame.font.Font(None,36)
+        self.font2    = pygame.font.Font(None,20)
+        self.v1_label = self.font.render(v1, 1,(10,10,10))
+        self.v2_label = self.font.render(v2, 1,(10,10,10))
+        
+    def track(self,bunch,turn):
+
+        self.background.fill((250, 250, 250)) #CLS
+        
+        text = self.font.render("Turn = "+str(turn+1),1,(10,10,10))
+        textpos = text.get_rect()
+        self.background.blit(text,textpos)
+        
+        updateX=False
+        xmin = bunch.particles[0,:].min()
+        if xmin < self.xmin or self.xmin==None:
+            self.xmin = xmin
+            updateX = True
+            self.xScale = 300/max(-self.xmin,self.xmax)
+        xmax = bunch.particles[0,:].max()
+        if xmax > self.xmax or self.xmax==None:
+            self.xmax = xmax
+            updateX = True
+            self.xScale = 300/max(-self.xmin,self.xmax)
+        updateY=False
+        ymin = bunch.particles[1,:].min()
+        if ymin < self.ymin or self.ymin==None:
+            self.ymin = ymin
+            updateY = True
+            self.yScale = 300/max(-self.ymin,self.ymax)
+        ymax = bunch.particles[1,:].max()
+        if ymax > self.ymax or self.xmax==None:
+            self.ymax = ymax
+            updateY = True
+            self.yScale = 300/max(-self.ymin,self.ymax)
+        renderString = "%.3g"
+        if updateX:
+            #new X ticks
+            self.v1_ticks=[]
+            xmaxmin = max(-self.xmin,self.xmax)
+            self.v1_ticks.append(self.font2.render(renderString%(-xmaxmin,),1,(10,10,10)))
+            self.v1_ticks.append(self.font2.render(renderString%(-xmaxmin/2.,),1,(10,10,10)))
+            self.v1_ticks.append(self.font2.render(renderString%(+xmaxmin/2.,),1,(10,10,10)))
+            self.v1_ticks.append(self.font2.render(renderString%(+xmaxmin,),1,(10,10,10)))
+            print "updateX"
+        if updateY:
+            #new Y ticks
+            self.v2_ticks=[]
+            ymaxmin = max(-self.ymin,self.ymax)
+            self.v2_ticks.append(self.font2.render(renderString%(+ymaxmin,),1,(10,10,10)))
+            self.v2_ticks.append(self.font2.render(renderString%(+ymaxmin/2.,),1,(10,10,10)))
+            self.v2_ticks.append(self.font2.render(renderString%(-ymaxmin/2.,),1,(10,10,10)))
+            self.v2_ticks.append(self.font2.render(renderString%(-ymaxmin,),1,(10,10,10)))
+            print "updateY"
+        
+        #x axis
+        pygame.draw.line(self.background, (10,10,10), (50,400), (750,400))   #line
+        pygame.draw.line(self.background, (10,10,10), (740,410),(750,400))   #arrow
+        pygame.draw.line(self.background, (10,10,10), (740,390),(750,400))
+        pygame.draw.line(self.background, (10,10,10), (100,390), (100,410))  #Ticks
+        pygame.draw.line(self.background, (10,10,10), (300,390), (300,410))
+        pygame.draw.line(self.background, (10,10,10), (500,390), (500,410))
+        pygame.draw.line(self.background, (10,10,10), (700,390), (700,410))
+        self.background.blit(self.v1_label,(740,410))                        #Labels
+        for (t,i) in zip(self.v1_ticks,xrange(4)):
+            self.background.blit(t,(100+200*i,410))
+        #y axis
+        pygame.draw.line(self.background, (10,10,10), (400,750),(400,50))    #line
+        pygame.draw.line(self.background, (10,10,10), (390,60), (400,50))    #arrow
+        pygame.draw.line(self.background, (10,10,10), (410,60), (400,50))
+        pygame.draw.line(self.background, (10,10,10), (390,100), (410,100))  #Ticks
+        pygame.draw.line(self.background, (10,10,10), (390,300), (410,300))
+        pygame.draw.line(self.background, (10,10,10), (390,500), (410,500))
+        pygame.draw.line(self.background, (10,10,10), (390,700), (410,700))
+        self.background.blit(self.v2_label,(410,60))                         #Labels
+        for (t,i) in zip(self.v2_ticks,xrange(4)):
+            self.background.blit(t,(410,100+200*i))
+        
+        def getXY(x,y):
+            X = int(400+self.xScale*x)
+            Y = int(400-self.yScale*y)
+            return (X,Y)
+        
+        for (i,x,y) in zip(xrange(bunch.N),bunch.particles[0,:],bunch.particles[1,:]):
+            (X,Y) = getXY(x,y)
+            C = np.asarray((255,255,255))*float(i)/bunch.N
+            C = map(int,C)
+            pygame.draw.rect(self.background, C, (X-5,Y-5,10,10))
+
+        #pygame.draw.rect(self.background, (0,0,255), (100,100,600,600),1)
+
+        self.window.blit(self.background,(0,0))
+        pygame.display.flip()
+        
