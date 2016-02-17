@@ -39,6 +39,7 @@ class Ring:
                     self.elements.append(RFCavity_Matrix(float(l[0]),float(l[1]),float(l[2]),float(l[3]),float(l[4])))
                 else:
                     print "ERROR in Ring::__init__(initStr)::RFCAV_MATRIX while parsing line '"+line+"'"
+                    exit(1)
                 self.elements[-1].ring=self
             elif lsp[0]=="RFCAV_LOADING":
                 l=lsp[1:]
