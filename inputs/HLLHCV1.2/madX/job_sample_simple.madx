@@ -13,7 +13,7 @@ exec,check_ip(b1);! exec,check_ip(b2);
 
 // Make the TFS table for the rmatrices
 select, flag=twiss, clear;
-select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE;
+select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE,BETX,BETY;
 twiss,rmatrix=true,file="RE_B1.tfs",chrom=true,sectormap=true,sectorfile="SECTOR_B1.tfs";
 
 
