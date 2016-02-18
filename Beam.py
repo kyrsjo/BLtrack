@@ -122,21 +122,10 @@ class Bunch:
         bunch = Bunch(N)
         bunch.beam=beam
         
-        # For some reason this is borked??
-        #mean = (X,XP,Y,YP,0.0,0.0)
-        #cov = np.diag(v=(sigX,sigXP,sigY,sigYP,sigZ,sigE))
+        mean = (X,XP,Y,YP,0.0,0.0)
+        cov = np.diag(v=(sigX**2,sigXP**2,sigY**2,sigYP**2,sigT**2,(sigEnorm*beam.E0/beam.p0)**2))
         #print util.prettyPrint66(cov)
-        #bunch.particles=np.random.multivariate_normal(mean,cov,N).transpose()
-        
-        #Works (but no correlations possible):
-        bunch.particles = np.zeros((6,N))
-        bunch.particles[0,:] = np.random.normal(X,sigX,N)
-        bunch.particles[1,:] = np.random.normal(XP,sigXP,N)
-        bunch.particles[2,:] = np.random.normal(Y,sigY,N)
-        bunch.particles[3,:] = np.random.normal(YP,sigYP,N)
-        bunch.particles[4,:] = np.random.normal(0.0,sigT,N)
-        bunch.particles[5,:] = np.random.normal(0.0,sigEnorm*beam.E0/beam.p0,N)
-
+        bunch.particles=np.random.multivariate_normal(mean,cov,N).transpose()
 
         print bunch.getMeans()
         print "Created bunch:"
