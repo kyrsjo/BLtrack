@@ -127,14 +127,13 @@ class Bunch:
         #print util.prettyPrint66(cov)
         bunch.particles=np.random.multivariate_normal(mean,cov,N).transpose()
 
-        print bunch.getMeans()
-        print "Created bunch:"
-        print "BETX=",BETX #m
-        print "BETY=",BETY #m
-        print "eps_g=",eps_g
-        print "gamma0=",beam.gamma0
-        print "beta0=",beam.beta0
-        #exit(1)
+        #print "Created bunch:"
+        #print "BETX=",BETX #m
+        #print "BETY=",BETY #m
+        #print "eps_g=",eps_g
+        #print "gamma0=",beam.gamma0
+        #print "beta0=",beam.beta0
+        #print bunch.getMeans()
         
         return bunch
         
