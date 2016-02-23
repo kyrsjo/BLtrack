@@ -236,7 +236,7 @@ class RFCavity_loading(Element):
         # - 'noload1':
         #   The beam loading has no effect on the beam (but it is still calculated)
         #
-        assert self.mode=='simple' or self.mode=='noload1', "got mode='"+str(mode)+"'"
+        assert self.mode=='simple' or self.mode=='noload1' or self.mode=='power1', "got mode='"+str(mode)+"', which is unknown"
         
         if fname=="nofile":
             self.fname = None
@@ -245,7 +245,10 @@ class RFCavity_loading(Element):
             self.of.write("# RFCavity_loading output file\n")
             self.of.write("# " +str(self)+"\n")
             self.of.write("#\n")
-            self.of.write("#     Turns       |Vb|    ang(Vb)\n")
+            if self.mode == "power1":
+                self.of.write("#     Turns       |Vb|    ang(Vb)     Power\n")
+            else:
+                self.of.write("#     Turns       |Vb|    ang(Vb)     Energy\n")
         self.Vb         = 0j
         
     def track(self,bunch,turn):
@@ -253,10 +256,16 @@ class RFCavity_loading(Element):
         L = self.ring.length # Distance from previous bunch [m]
         assert type(L) == float, "ring length should be a float, is it defined?"
         self.Vb *= np.exp(-1j*2*np.pi*L/self.wavelength)*np.exp(- np.pi * L /(self.QL*self.wavelength))
+
+        if self.mode == "power1":
+            U = np.absolute(self.Vb)**2 * self.wavelength /(2.0*2*np.pi*util.c*self.RQ) #[J]
+            self.Vb = 0j
+
         #Beam loading voltage for a single particle
         Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*bunch.chargeN/bunch.N
         
-        if self.mode == 'simple':
+        #RF<->particles
+        if self.mode == 'simple' or self.mode == 'power1':
             #Sort the particles and iterate (this kills the performance in Python :( ):
             tKey = np.argsort(bunch.particles[4,:])
             for pind in tKey[::-1]: #Loop from (largest T -> smallest) to (smallest T -> largest t):
@@ -268,9 +277,14 @@ class RFCavity_loading(Element):
         elif self.mode == 'noload1':
             bunch.particles[5,:] += self.Vg*np.sin(2*np.pi * bunch.particles[4,:] / self.wavelength + self.phase) / bunch.beam.p0
             self.Vb -=  np.sum(Vb0*np.exp(-1j*2*np.pi*bunch.particles[4,:]/self.wavelength))
-        
+            
         if self.of:
-            self.of.write(" %10i %10g %10g \n" %(turn, np.absolute(self.Vb), np.angle(self.Vb)) )
+            if self.mode == "power1":
+                P = U/(L/util.c)
+                self.of.write(" %10i %10g %10g %10g\n" %(turn, np.absolute(self.Vb), np.angle(self.Vb), P))
+            else:
+                U = np.absolute(self.Vb)**2 * self.wavelength /(2.0*2*np.pi*util.c*self.RQ) #[J] (factor 2? Which def was used for R/Q...)
+                self.of.write(" %10i %10g %10g %10g\n" %(turn, np.absolute(self.Vb), np.angle(self.Vb), U))
         
     def __str__(self):
         ret = "RFCavity_loading: "
