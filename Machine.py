@@ -254,7 +254,7 @@ class RFCavity_loading(Element):
         assert type(L) == float, "ring length should be a float, is it defined?"
         self.Vb *= np.exp(-1j*2*np.pi*L/self.wavelength)*np.exp(- np.pi * L /(self.QL*self.wavelength))
         #Beam loading voltage for a single particle
-        Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*1e11/bunch.N # TODO: Bunch charge hard-coded to 10^11...
+        Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*bunch.chargeN/bunch.N
         
         if self.mode == 'simple':
             #Sort the particles and iterate (this kills the performance in Python :( ):

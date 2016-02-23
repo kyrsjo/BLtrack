@@ -26,17 +26,7 @@ class Beam:
         for line in initStr.splitlines():
             #print "l=",line
             lsp = line.split()
-            if lsp[0] == "BUNCH":
-                l = lsp[1:]
-                assert len(l)==8, \
-                    "Expected format: BUNCH t Nparticles sigx sigxp sigy sigyp sigz sigzp"
-                self.bunches_z0.append(float(l[0]))
-                N=int(l[1])
-                lf = map(float,l[2:])
-                self.bunches.append(Bunch(N, lf[0],lf[1],lf[2],lf[3],lf[4],lf[5]))
-                self.bunches[-1].beam = self
-                #print self.bunches[-1].particles
-            elif lsp[0] == "BUNCH_TWISS":
+            if lsp[0] == "BUNCH_TWISS":
                 l = lsp[1:]
                 assert len(l)==12, \
                     "Expected format: 'BUNCH_TWISS T0 N Np X XP BETX Y YP BETY EMIT sigT sigEnorm'"+\
@@ -108,49 +98,26 @@ class Bunch:
     def __init__(self,N):
         "Construct an empty Bunch object"
         self.N=N
-        #self.particles=np.zeros((6,N))
 
     @staticmethod
     def newBunch_twiss(N, Np, X, XP, BETX, Y, YP, BETY, EMIT, sigT, sigEnorm, beam):
 
         eps_g = EMIT / (beam.beta0*beam.gamma0) # Geometrical emittance
         sigX  = np.sqrt(eps_g*BETX)
-        sigXP = np.sqrt(eps_g/BETX)#*5
+        sigXP = np.sqrt(eps_g/BETX)
         sigY  = np.sqrt(eps_g*BETY)
-        sigYP = np.sqrt(eps_g/BETY)#*5
+        sigYP = np.sqrt(eps_g/BETY)
         
         bunch = Bunch(N)
         bunch.beam=beam
+        bunch.chargeN=Np
         
         mean = (X,XP,Y,YP,0.0,0.0)
         cov = np.diag(v=(sigX**2,sigXP**2,sigY**2,sigYP**2,sigT**2,(sigEnorm*beam.E0/beam.p0)**2))
-        #print util.prettyPrint66(cov)
         bunch.particles=np.random.multivariate_normal(mean,cov,N).transpose()
-
-        #print "Created bunch:"
-        #print "BETX=",BETX #m
-        #print "BETY=",BETY #m
-        #print "eps_g=",eps_g
-        #print "gamma0=",beam.gamma0
-        #print "beta0=",beam.beta0
-        #print bunch.getMeans()
         
         return bunch
         
-    # def __init__(self,N,sigx,sigxp,sigy,sigyp,sigt,sigPT):
-    #     self.N = N
-    #     #self.particles=np.empty((6,N))
-    #     self.makeGaussian(sigx,sigxp,sigy,sigyp,sigt,sigPT)
-    #     #print self.particles
-    def makeGaussian(self,sigx,sigxp,sigy,sigyp,sigt,sigPT):
-        mean=[0.0]*6
-        #mean[4]+=2.0*sigz
-        #mean[5]-=2.0*sigE
-        cov=np.diag(v=(sigx,sigxp,sigy,sigyp,sigt,sigPT))
-        #print mean
-        #print cov
-        self.particles=np.random.multivariate_normal(mean,cov,self.N).transpose()
-    
     def getMeans(self):
         return np.mean(self.particles,axis=1)
     def getSigmaMatrix(self):
