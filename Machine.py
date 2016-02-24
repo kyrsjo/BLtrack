@@ -484,33 +484,54 @@ class PlotDistribution(Element):
         self.v2_idx=cases[v2]
         
         self.doStop = doStop
-
-    def track(self,bunch,turn):
-
-        self.background.fill((250, 250, 250)) #CLS
         
+    def track(self,bunch,turn):
+        if bunch.bunchID != bunch.beam.numBunches-1:
+            #Not the last bunch of particles in the train...
+            return
+        
+        #This is the last bunch in the train, prepare the data and plot them all!
+        N=0
+        for b in bunch.beam.bunches:
+            N+=b.N
+        particles = np.empty((2,N))
+        N=0
+        for b in bunch.beam.bunches:
+            N2 = N+b.N
+            particles[0,N:N2] = b.particles[self.v1_idx]
+            particles[1,N:N2] = b.particles[self.v2_idx]
+            if self.v1_idx==4:
+                particles[0,N:N2]-=b.T0
+            if self.v2_idx==4:
+                particles[1,N:N2]-=b.T0
+            N = N2
+        
+        #Plotting
+        self.background.fill((250, 250, 250)) #CLS
+            
         text = self.font.render("Turn = "+str(turn+1),1,(10,10,10))
         textpos = text.get_rect()
         self.background.blit(text,textpos)
         
+        
         updateX=False
-        xmin = bunch.particles[self.v1_idx,:].min()
+        xmin = particles[0,:].min()
         if xmin < self.xmin or self.xmin==None:
             self.xmin = xmin
             updateX = True
             self.xScale = 300/max(-self.xmin,self.xmax)
-        xmax = bunch.particles[self.v1_idx,:].max()
+        xmax = particles[0,:].max()
         if xmax > self.xmax or self.xmax==None:
             self.xmax = xmax
             updateX = True
             self.xScale = 300/max(-self.xmin,self.xmax)
         updateY=False
-        ymin = bunch.particles[self.v2_idx,:].min()
+        ymin = particles[1,:].min()
         if ymin < self.ymin or self.ymin==None:
             self.ymin = ymin
             updateY = True
             self.yScale = 300/max(-self.ymin,self.ymax)
-        ymax = bunch.particles[self.v2_idx,:].max()
+        ymax = particles[1,:].max()
         if ymax > self.ymax or self.xmax==None:
             self.ymax = ymax
             updateY = True
@@ -563,11 +584,11 @@ class PlotDistribution(Element):
             Y = int(400-self.yScale*y)
             return (X,Y)
         
-        for (i,x,y) in zip(xrange(bunch.N),bunch.particles[self.v1_idx,:],bunch.particles[self.v2_idx,:]):
+        for (i,x,y) in zip(xrange(N),particles[0,:],particles[1,:]):
             (X,Y) = getXY(x,y)
-            C = np.asarray((255,255,255))*float(i)/bunch.N
+            C = np.asarray((255,255,255))*float(i)/float(N)
             C = map(int,C)
-            pygame.draw.rect(self.background, C, (X-5,Y-5,10,10))
+            pygame.draw.rect(self.background, C, (X-1,Y-1,2,2))
 
         #pygame.draw.rect(self.background, (0,0,255), (100,100,600,600),1)
 
