@@ -253,14 +253,20 @@ class RFCavity_loading(Element):
         
     def track(self,bunch,turn):
         #Calculate the current beam loading voltage at T=0:
-        L = self.ring.length # Distance from previous bunch [m]
+        if bunch.beam.numBunches == 1:
+            L = self.ring.length # Distance from previous bunch [m]
+        else:
+            if bunch.bunchID != 0:
+                L = bunch.T0 - bunch.beam.bunches[bunch.bunchID-1].T0
+            else:
+                L = self.ring.length - bunch.beam.bunches[-1].T0
         assert type(L) == float, "ring length should be a float, is it defined?"
         self.Vb *= np.exp(-1j*2*np.pi*L/self.wavelength)*np.exp(- np.pi * L /(self.QL*self.wavelength))
-
+        
         if self.mode == "power1":
             U = np.absolute(self.Vb)**2 * self.wavelength /(2.0*2*np.pi*util.c*self.RQ) #[J]
             self.Vb = 0j
-
+        
         #Beam loading voltage for a single particle
         Vb0 = self.RQ * 2*np.pi*util.c/self.wavelength * util.e*bunch.chargeN/bunch.N
         

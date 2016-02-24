@@ -8,21 +8,21 @@ class Beam:
     m0         = 938.272e6 #Beam particles rest mass [eV/c^2] (default: proton)
     p0         = None      #Beam momentum [eV/c]
     
+    numBunches = None
     bunches    = None      #Bunch objects
-    bunches_z0 = None      #Time of z=0 for the bunch objects, relative to some particle on the design orbit
-    
-    def __init__(self):
-        "Construct an empty Beam object"
+
     def __init__(self,initStr):
         "Construct a Beam object from an input file fragment"
         
+        self.numBunches = 0
         self.bunches    = []
-        self.bunches_z0 = []
         
         #print "BEAM"
         
-        myBuffer = None
-        bufferStatus=None
+        repeatNext = False
+        Nrepeat    = None
+        T0repeat   = None
+        
         for line in initStr.splitlines():
             #print "l=",line
             lsp = line.split()
@@ -44,8 +44,27 @@ class Beam:
                 sigT = float(l[10]) # Bunch length [m]
                 sigEnorm = float(l[11]) # Energy spread deltaE/E
                 
-                self.bunches_z0.append(float(l[0]))                
-                self.bunches.append(Bunch.newBunch_twiss(N, Np, X, XP, BETX, Y, YP, BETY, EMIT, sigT, sigEnorm, self))
+                if repeatNext:
+                    for i in xrange(Nrepeat):
+                        self.bunches.append(Bunch.newBunch_twiss(N, Np, X, XP, BETX, Y, YP, BETY, EMIT, sigT, sigEnorm, self))
+                        self.bunches[-1].T0 = T0+T0repeat*i
+                        self.bunches[-1].bunchID = self.numBunches
+                        self.numBunches += 1
+                    repeatNext = False
+                    Nrepeat = None
+                    T0repeat = None
+                else:
+                    self.bunches.append(Bunch.newBunch_twiss(N, Np, X, XP, BETX, Y, YP, BETY, EMIT, sigT, sigEnorm, self))
+                    self.bunches[-1].T0 = T0
+                    self.bunches[-1].bunchID = self.numBunches
+                    self.numBunches += 1
+                
+            elif lsp[0] == "REPEATBUNCH":
+                assert repeatNext == False, "Each repeatbunch should be resolved before setting up the next"
+                repeatNext=True
+                l = lsp[1:]
+                Nrepeat  = int(l[0])
+                T0repeat = float(l[1])
                 
             elif lsp[0] == "ENERGY":
                 l=lsp[1:]
@@ -60,7 +79,7 @@ class Beam:
                 print "Error in Beam::__init__(initStr) while parsing line '"+line+"'"
                 exit(1)
         assert self.E0!=None
-            
+        assert repeatNext == False, "Dangling REPEATBUNCH"
     def sortBunches(self):
         pass
     def getNumParticles(self):
@@ -76,8 +95,8 @@ class Beam:
         ret += "beta0  = " +str(self.beta0) + "\n"
         ret += "p0     = " +str(self.p0/1e9)+ " [GeV/c]\n"
         ret += "N      = " +str(self.getNumParticles())+"\n"
-        for (bunch,z) in zip(self.bunches,self.bunches_z0):
-            ret += "Bunch: t = "+str(z)+"\n"
+        for bunch in self.bunches:
+            ret += "Bunch: T0 = "+str(bunch.T0)+"\n"
             ret += "\t Means = "+str(bunch)+"\n"
         return ret
         
@@ -93,7 +112,8 @@ class Bunch:
     chargeN   = None #Number of electron charges in total
     
     beam      = None #Pointer back to the beam object
-    
+    T0        = None #Negative offset for T [m]
+    bunchID   = None #Index of this bunch object in the beam object
     
     def __init__(self,N):
         "Construct an empty Bunch object"
