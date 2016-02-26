@@ -55,6 +55,18 @@ class Ring:
                 
                 self.elements.append(RFCavity_loading(Vg,wavelength,phase,RQ,QL,mode,fname))
                 self.elements[-1].ring=self
+            elif lsp[0]=="CRABCAV":
+                l=lsp[1:]
+                assert len(l)==4, \
+                    "ERROR in Ring::__init__(initStr)::RFCAV_LOADING while parsing line '"+line+"'"
+                V = float(l[0])
+                wavelength = float(l[1])
+                phase = float(l[2])
+                HoV = l[3]
+                
+                self.elements.append(CrabCavity(V,wavelength,phase,HoV))
+                self.elements[-1].ring=self
+                
             elif lsp[0]=="PRINTMEAN":
                 if len(lsp) == 1:
                     self.elements.append(PrintMean(None))
@@ -308,11 +320,11 @@ class CrabCavity(Element):
     
     Vlong      = None # longitudinal kick voltage = Vcc*omega/c [V/mm]
     
-    def __init__(self,voltage,wavelength,phase,HorV):
+    def __init__(self,voltage,wavelength,phase,HoV):
         self.voltage    = voltage
         self.wavelength = wavelength
         self.phase      = phase
-        assert HorV == "H" or HorV=="V"
+        assert HoV == "H" or HoV=="V"
         self.HoV = HoV
         
         self.Vlong      = self.voltage*2*np.pi/self.wavelength*1e3
@@ -320,20 +332,19 @@ class CrabCavity(Element):
     def track(self,bunch,turn):
         if self.HoV=='H':
             bunch.particles[1,:] -= self.voltage \
-                                    * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
-                                    / np.sqrt(bunch.E0**2-bunch.m0**2)
+                                    * np.sin(bunch.particles[4,:]*2*np.pi/self.wavelength + self.phase) /  bunch.beam.p0
+            bunch.particles[5,:] -= self.Vlong * bunch.particles[0,:]\
+                                    * np.cos(bunch.particles[4,:]*2*np.pi/self.wavelength + self.phase) / bunch.beam.p0
+
         elif self.HoV=='V':
             bunch.particles[3,:] -= self.voltage \
-                                    * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
-                                    / np.sqrt(bunch.E0**2-bunch.m0**2)
+                                    * np.sin(bunch.particles[4,:]*2*np.pi/self.wavelength + self.phase) / bunch.beam.p0
+            bunch.particles[5,:] -= self.Vlong * bunch.particles[2,:]\
+                                    * np.cos(bunch.particles[4,:]*2*np.pi/self.wavelength + self.phase) / bunch.beam.p0
         else:
             print "WTF in CrabCavity.track()"
             exit(1)
-        
-        bunch.particles[5,:] += self.Vlong \
-                                * np.cos(-bunch.particles[4,:]/(2*np.pi*self.wavelength) + self.phase) \
-                                / np.sqrt(bunch.E0**2-bunch.m0**2)
-        
+                
     def __str__(self):
         ret = "CrabCavity: "
 #        ret += " voltage = %10g[V], wavelength = %10g[m], phase = %10g[rad]\n\n" % (self.voltage,self.wavelength,self.phase)
