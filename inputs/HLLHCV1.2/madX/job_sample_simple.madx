@@ -11,6 +11,14 @@ call,file="slhc/opt_round.madx"; ! For thick optics
 exec,crossing_enable;
 exec,check_ip(b1);! exec,check_ip(b2);
 
+// Make a general TFS table
+select, flag=twiss, clear;
+select, flag=twiss, column=name,s,L,X,PX,Y,PY,T,PT,BETX,ALFX,MUX,BETY,ALFY,MUY;
+/select,flag=twiss, pattern="^ACFCA";
+/select,flag=twiss, pattern="^ACSCA";
+/select,flag=twiss, pattern="^IP";
+twiss,file="twiss_B1.tfs",chrom=true;
+
 // Make the TFS table for the rmatrices
 select, flag=twiss, clear;
 select, flag=twiss, column=name,s,X,PX,Y,PY,T,PT,RE,BETX,BETY;
